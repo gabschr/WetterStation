@@ -32,7 +32,7 @@ void setup() {
 	tasterDDR = (0 << PB2);    // taster als Eingang definieren
    
 	Serial.begin(9600);
-	Serial.println("/n/n Ausgabe am Monitor");
+	Serial.println("\n\nAusgabe am Monitor");
 	Serial.println("------------------");
 }
 
@@ -60,10 +60,12 @@ void loop() {
 
 	delay(1000);
 	
-	Serial.println("\n Mit Bibliothek:");
+	Serial.println("\nMit Bibliothek:");
 	
 	DHT11Abfrage(FeuchtLuftPD);
 	Serial.println();
+
+	delay(1000);
 
 	TempFeuchtAbfr(FeuchtLuftPD);
 	Serial.print("Feuchtigkeit: ");
@@ -71,6 +73,12 @@ void loop() {
 	Serial.print("%, Lufttemperatur: ");
 	Serial.print(Luft);
 	Serial.println("°C");
+
+	delay(1000);
+	Serial.println("\n2. Durchlauf Bibliothek:");
+
+	DHT11Abfrage(FeuchtLuftPD);
+	Serial.println();
 
 
 	// fröhlich blinken lassen :)
@@ -87,6 +95,7 @@ void loop() {
 
 }
 
+// Abfrage des Sensors ohne Bibliothek
 void TempFeuchtAbfr(int pin) {
 	#define FeuchtLuftDDR   DDRD   // Port Group D, wo auch Feuchtigkeitssensor dran hängt
 	#define FeuchtLuftPORT  PORTD  // Portgruppe D PORTD 
@@ -98,8 +107,6 @@ void TempFeuchtAbfr(int pin) {
 	uint8_t i = 0;	//Laufzeitvariable
 	uint8_t wertSensor[5];	//Vektor für die einzelnen Byte-Werte des Sensores
 	uint8_t wertBit = 7;
-
-	pin = PD3;
 
 	//wertSensor auf 0 setzen:
 	for (i = 0; i < 5; i++) {
@@ -135,25 +142,26 @@ void TempFeuchtAbfr(int pin) {
 		}
 		*/
 
-		while ((FeuchtLuftPIN & (1 << pin)) == i) {	//((FeuchtLuftPIN & (1 << pin)) >> pin)
+		while (((FeuchtLuftPIN & (1 << pin)) >> pin) == i) {	//((FeuchtLuftPIN & (1 << pin)) >> pin) //High oder Low am Eingang des Sensors; BitStelle des Sensors zurück, damit 0 oder 1
 			delayMicroseconds(1);
 			counter++;
 			timeout--;
+
 			// abfragewert = ((FeuchtLuftPIN & (1 << pin)) >> pin);
-			/*
+			
 			if (timeout == 0) {
 				Serial.println("Fehler beim Abfragen");
 				Serial.print("abfragewert: ");
-				Serial.print(((FeuchtLuftPIN & (1 << pin)));
+				Serial.print((FeuchtLuftPIN & (1 << pin)) >> pin);
 				Serial.print(", counter: ");
 				Serial.print(counter);
 				Serial.print(", i= ");
 				Serial.print(i);
 				Serial.print(", timeout= ");
 				Serial.println(timeout);
-				return;
+				break;
 			}
-			*/
+			
 		}
 		if (counter > 90) {
 			Serial.println("Fehler beim Abfragen nach Auswertung des Counters");
@@ -167,8 +175,10 @@ void TempFeuchtAbfr(int pin) {
 
 				Feucht = 99;
 				Luft = 99;
-			return;
+			break;
 		}
+
+		
 	}
 	
 	/*
@@ -274,6 +284,8 @@ void TempFeuchtAbfr(int pin) {
 	Serial.print("%, Lufttemperatur: ");
 	Serial.print(Luft);
 	Serial.println("°C");
+
+	FeuchtLuftDDR = (1 << pin);   // als Ausgang setzen
 
 }
 
