@@ -60,17 +60,18 @@ void loop() {
 
 	delay(1000);
 	
-	TempFeuchtAbfr (FeuchtLuftPD);
+	Serial.println("\n Mit Bibliothek:");
+	
+	DHT11Abfrage(FeuchtLuftPD);
+	Serial.println();
+
+	TempFeuchtAbfr(FeuchtLuftPD);
 	Serial.print("Feuchtigkeit: ");
 	Serial.print(Feucht);
 	Serial.print("%, Lufttemperatur: ");
 	Serial.print(Luft);
 	Serial.println("°C");
-	
-	Serial.println("\n Mit Bibliothek:");
-	DHT11Abfrage(FeuchtLuftPD);
-	Serial.println();
-	
+
 
 	// fröhlich blinken lassen :)
 	int counter = 0;
@@ -116,7 +117,7 @@ void TempFeuchtAbfr(int pin) {
 
 	// Antwort des Sensors abfragen (80µs LOW, dann 80µs HIGH)
 	for (i = 0; i <= 1; i++) {
-		timeout = 10000;
+		timeout = 100000;
 		counter = 0;
 
 		/*
@@ -134,15 +135,16 @@ void TempFeuchtAbfr(int pin) {
 		}
 		*/
 
-		while (abfragewert == i) {	//((FeuchtLuftPIN & (1 << pin)) >> pin)
+		while ((FeuchtLuftPIN & (1 << pin)) == i) {	//((FeuchtLuftPIN & (1 << pin)) >> pin)
 			delayMicroseconds(1);
 			counter++;
 			timeout--;
-			abfragewert = ((FeuchtLuftPIN & (1 << pin)) >> pin);
+			// abfragewert = ((FeuchtLuftPIN & (1 << pin)) >> pin);
+			/*
 			if (timeout == 0) {
 				Serial.println("Fehler beim Abfragen");
 				Serial.print("abfragewert: ");
-				Serial.print(abfragewert);
+				Serial.print(((FeuchtLuftPIN & (1 << pin)));
 				Serial.print(", counter: ");
 				Serial.print(counter);
 				Serial.print(", i= ");
@@ -151,6 +153,7 @@ void TempFeuchtAbfr(int pin) {
 				Serial.println(timeout);
 				return;
 			}
+			*/
 		}
 		if (counter > 90) {
 			Serial.println("Fehler beim Abfragen nach Auswertung des Counters");
