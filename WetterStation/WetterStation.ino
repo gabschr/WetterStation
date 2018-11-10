@@ -11,28 +11,11 @@
 //Display auf Port initalisieren
 LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
 
-//zum Testen des Sensors
-#include <dht11.h>
-dht11 DHT11;
-
-#define ledDDR   DDRB  // Port Group B DDR - als Ausgang oder Eingang definieren
-#define ledPORT  PORTB // Portgrupppe B PORTB
-#define ledPIN   PD5   // LED-PIN 5 an PortGroup B (Port 13)
-
-#define tasterDDR   DDRD   // Port Group D
-#define tasterPIN   PIND   // PIN GROUP D
-
+// Deklaration der PINS
 #define FeuchtLuftPD	PD3	//PIN für den Feuchtigkeits- und Temp- Sensor
 
-#define DHT22FeuchtLuftPD	PD4	//PIN für den DHT22 Feuchtigkeits- und Temp-Sensor
-
-// Taster
-bool buttonState = 0;  //Tasterstatus feststellen
-int counter = 0;
-bool buttonStateBevor = LOW; //Tastenstatus vorher feststellen
-
 // für die Daten Feuchtigkeit und Temperatur
-float Feucht = 0, Luft = 0;
+float wetterSensor[3]; //Sensor fuer Temp und Feuchtigkeit (0. Wert: Zeitstempel (ab Start vom Arduino in µs), 1.Wert: Feucht, 2.Wert: Temp 
 
 void setup() {
 	//LCD Dispay initialisieren
@@ -40,277 +23,178 @@ void setup() {
 	lcd.clear();
 
 	//Temperatur && Feuchtigkeit
-	ledDDR = (1 << PB5);    // LED als Ausgang definiert
-	ledPORT = (0 << PB5);   // LED auf LOW setzen
-
-	tasterDDR = (0 << PB2);    // taster als Eingang definieren
-
 	Serial.begin(9600);
 	Serial.println("\n\nAusgabe am Monitor");
 	Serial.println("------------------");
+
+	DDRD |= (1 << FeuchtLuftPD);   // als Ausgang setzen (ODER-Verknuepfung mit PIN)
 }
 
 void loop() {
+	// abrufen der Daten
+	feuchtLuftAbfrage(FeuchtLuftPD);
 
-	buttonState = (tasterPIN & (1 << PD2));  // Taster abfragen
+	// Anzeige auf Seriellen Monitor
+	Serial.print("Sensor-Daten:\nZeit: ");
+	Serial.print(wetterSensor[0] / 1000);
+	Serial.print("ms, Temperatur: ");
+	Serial.print(wetterSensor[1]);
+	Serial.print(", Feuchtigkeit: ");
+	Serial.print(wetterSensor[2]);
+	Serial.println("\n\n");
 
-	if (buttonState == LOW) {       // Taster wurde gedrückt - Masse wurde angelegt (0)
-		ledPORT = (1 << ledPIN);          // LED auf High setzen
-
-		if (buttonStateBevor == HIGH) {
-			counter += 1;
-			buttonStateBevor = LOW;
-			Serial.print("COUNTER ");
-			Serial.println(counter);
-		}
-	}
-
-	if (buttonState != 0) {      // Taster wurde nicht gedrückt
-		ledPORT = (0 << ledPIN);   // LED auf LOW setzen
-		if (buttonStateBevor == LOW) {	// Prellen des Schalters zaehlen
-			buttonStateBevor = HIGH;
-		}
-	}
-
-	delay(1000);
-
-	Serial.println("\nMit Bibliothek:");
-
-	DHT11Abfrage(FeuchtLuftPD);
-	Serial.println();
-
-	delay(1000);
-
-	TempFeuchtAbfr(FeuchtLuftPD);
-	Serial.print("Feuchtigkeit: ");
-	Serial.print(Feucht);
-	Serial.print("%, Lufttemperatur: ");
-	Serial.print(Luft);
-	Serial.println("°C");
-
-	delay(1000);
-	Serial.println("\n2. DHT22:");
-
-	delay(1000);
-
-	TempFeuchtAbfr(DHT22FeuchtLuftPD);
-	Serial.println();
-	Serial.println("DHT22-Abfrage mit DHT11-Bibliothek");
-	DHT11Abfrage(DHT22FeuchtLuftPD);
+	// Anzeige auf Display
+	lcdAnzeige();
 
 
-	// fröhlich blinken lassen :)
+
+}
+
+int feuchtLuftAbfrage(int pin) {
+	//Variablen
+	int wert[5];		//Bytes des Sensorwertes
+	int bitwert = 7;	//Bit der einzelnen Bytes der Sensorwertes
+
+	// Hilfsvariablen
+	int timercounter = 10000;
 	int counter = 0;
+	float t = 0, t1 = 0;	//Zeitabfrage
+	int i = 0, j = 0;		//Schleifenvariablen
+	int sensorBitWert;		//Sensorwert
 
-	for (counter = 1; counter <= 10; counter++) {
-		// LED blinken lassen
-		ledPORT = (1 << ledPIN);   // LED auf HIGH setzen
-		delay(100);
-		ledPORT = (0 << ledPIN);   // LED auf LOW setzen
-		delay(200);
-	}
+	// Fehlersuche
+	int fehler = 0, counter1 = 0;
+	int pausenzeit = 0;
 
-
-}
-
-// Abfrage des Sensors ohne Bibliothek
-void TempFeuchtAbfr(int pin) {
-#define FeuchtLuftDDR   DDRD   // Port Group D, wo auch Feuchtigkeitssensor dran hängt
-#define FeuchtLuftPORT  PORTD  // Portgruppe D PORTD 
-#define FeuchtLuftPIN   PIND   // PIN GROUP D
-
-	uint32_t timeout = 0;
-	uint8_t counter = 0;
-	uint8_t abfragewert = 0;
-	uint8_t i = 0;	//Laufzeitvariable
-	uint8_t wertSensor[5];	//Vektor für die einzelnen Byte-Werte des Sensores
-	uint8_t wertBit = 7;
-
-	//wertSensor auf 0 setzen:
+	// leere Puffer
 	for (i = 0; i < 5; i++) {
-		wertSensor[i] = 0;
+		wert[i] = 0;
 	}
 
-	// Sensorabfrage aktivieren, gemäß Datenblatt: Arduino muss 18ms LOW setzen, danach 40µs HIGH
-	Serial.println("Abfrage ohne Bibliothek");
+	Serial.print("Sensor-Abfrage ");
+	Serial.println(pin);
 
-	// Arduino stellt den Sensor auf Empfang
-	FeuchtLuftDDR = (1 << pin);   // als Ausgang setzen
-	FeuchtLuftPORT = (0 << pin);  // auf LOW setzen
+	// Sensor starten - PIN als Ausgang verwenden (laut Datenblatt)
+	DDRD |= (1 << FeuchtLuftPD);	// als Ausgang setzen
+	PORTD &= ~(1 << FeuchtLuftPD);	// auf LOW setzen (invertiere den Port und setze mit Register PORTD zusammen)
 	delay(18);
-	FeuchtLuftPORT = (1 << pin);  // auf HIGH setzen
+	PORTD |= (1 << FeuchtLuftPD);	// auf HIGH setzen
 	delayMicroseconds(40);
-	FeuchtLuftDDR = (0 << pin);   // als Eingang setzen
+	DDRD &= ~(1 << FeuchtLuftPD);	// PIN als Eingang setzen
+	//PORTD &= ~(1 << FeuchtLuftPD);	// Pull-Up-Widerstand am Arduino nicht setzen, da am Sensor vorhanden (invertiere den Port und setze mit Register PORTD zusammen)
 
-	// Antwort des Sensors abfragen (80µs LOW, dann 80µs HIGH)
-	for (i = 0; i <= 1; i++) {
-		timeout = 10000;
-		counter = 0;
+	//pinMode(pin, INPUT);
 
-		/*
-		// mit Hilfe der PulseIn- Funktion testen:
-		counter = pulseIn(pin, i, timeout);
-		if (counter <= 70) {
-			Serial.print("Counter: ");
-			Serial.print(counter);
-			Serial.print(", i: ");
-			Serial.println(i);
+	//Sensor auf Antwort abfragen
+	t = micros();
+
+	sensorBitWert = (pin & (1 << pin));
+
+	// while ((pin & (1 << pin)) == 0) { //ist Sensor auf LOW-Signal?
+	while ((digitalRead(pin)) == LOW) {	//ist Sensor auf LOW-Signal?
+		counter1++;
+		delayMicroseconds(1);
+		if (timercounter-- == 0) {
+			fehler = -1;
 			break;
+			//return fehler;
 		}
-		*/
-
-		while (((FeuchtLuftPIN & (1 << pin)) >> pin) == i) {	//((FeuchtLuftPIN & (1 << pin)) >> pin) //High oder Low am Eingang des Sensors; BitStelle des Sensors zurück, damit 0 oder 1
-			delayMicroseconds(1);
-			counter++;
-			timeout--;
-
-			// abfragewert = ((FeuchtLuftPIN & (1 << pin)) >> pin);
-
-			if (timeout == 0) {
-				Serial.println("Fehler beim Abfragen");
-				Serial.print("abfragewert: ");
-				Serial.print((FeuchtLuftPIN & (1 << pin)) >> pin);
-				Serial.print(", counter: ");
-				Serial.print(counter);
-				Serial.print(", i= ");
-				Serial.print(i);
-				Serial.print(", timeout= ");
-				Serial.println(timeout);
-				return;
-			}
-
-		}
-		if (counter > 90) {
-			Serial.println("Fehler beim Abfragen nach Auswertung des Counters");
-
-			Serial.print("abfragewert: ");
-			Serial.print(abfragewert);
-			Serial.print(", counter: ");
-			Serial.print(counter);
-			Serial.print(", i= ");
-			Serial.println(i);
-
-			Feucht = 99;
-			Luft = 99;
-			break;
-		}
-		
 	}
+	counter1 = micros() - t;
 
-	/*
-	ab jetzt kommen die Daten
-	1. Byte: Relative Luftfeuchtigkeit in %
-	2. Byte: Nachkommastelle Relative Luftfeuchtigkeit in % (bei DHT11 immer 0)
-	3. Byte: Temperatur in Celsiusgrad
-	4. Byte: Nachkommastellen der Temperatur (DHT11 immer 0)
-	5. Byte: Summe der ersten 4 Bytes (Kontrolle)
+	timercounter = 10000;
+	counter = 0;
 
-	Bit- Aufbau (Länge ist entscheidend):
-	- 50µs LOW: Anfang des Bits
-	- 26 bis 28 µs HIGH: LOW-Signal
-		oder: 70µs HIGH: HIGH-Signal
-	*/
+	t1 = micros();
+	t = micros();
+	while ((digitalRead(pin)) == HIGH) {		//ist Sensor auf HIGH-Signal?
+		counter++;
+		if (timercounter-- == 0) {
+			fehler = -2;
+			break;
+			//return fehler;
+		}
+	}
+	counter += micros() - t;
 
 	for (i = 0; i < 5; i++) {
-		timeout = 90;
-		counter = 0;
-
-		for (wertBit = 7; wertBit = 0; wertBit--) {
-			
-			while (((FeuchtLuftPIN & (1 << pin)) >> pin) == 0) {
-				counter++;
-				timeout--;
-				delayMicroseconds(1);
-				if (timeout == 0) {
-					Serial.println("Fehler beim Auslesen");
+		for (j = 7; j >= 0; j--) {
+			timercounter == 10000;
+			t = micros();
+			//Pausenzeit ist 50µs
+			while ((digitalRead(pin)) == LOW) {		//ist Sensor auf LOW-Signal?
+				if (timercounter-- == 0) {
+					fehler = -3;
 					break;
+					//return fehler;
+				}
+			}
+			pausenzeit = micros() - t;
+
+			t = micros();
+			while ((digitalRead(pin)) == HIGH) {		//ist Sensor auf LOW-Signal?
+				if (timercounter-- == 0) {
+					fehler = -3;
+					break;
+					//return fehler;
 				}
 			}
 
-			if (counter < 80) {
-				Serial.println("Fehler beim Auslesen counter");
-				break;
-			}
-
-
-			counter = 0;
-			timeout = 80;
-			while (((FeuchtLuftPIN & (1 << pin)) >> pin) == 1) {		//so lange HIGH am Eingang anliegt, zähle die Mikrosekunden
-				counter++;
-				timeout--;
-				delayMicroseconds(1);
-				if (timeout == 0) {
-					Serial.println("Fehler beim Auslesen");
-					break;
-				}
-			}
-
-			if (counter <= 28) {
-				if (counter <= 25) {	//LOW-Signal am aktuellen BIT
-					Serial.println("Fehler beim Auslesen");
-					break;
-				}
-				wertSensor[i] |= (0 << wertBit);
-			}
-			if (counter >= 70) {
-				wertSensor[i] |= (1 << wertBit);
+			// gesendetes BIT HIGH?
+			if ((micros() - t) >= 60) {
+				wert[i] |= (1 << j);
 			}
 		}
-		/*
-		Serial.print("wertSensor ");
-		Serial.println(wertSensor[i]);
-		*/
 	}
 
-	// Paritätsbit-Prüufung
-	if (wertSensor[4] != wertSensor[0] + wertSensor[1] + wertSensor[2] + wertSensor[3]) {
-		Serial.println("Paritätsprüfung fehlgeschlagen");
+	//Paritaetspruefung
+	int sum = wert[0] + wert[1] + wert[2] + wert[3];
+	if (sum != wert[4]) {
+		Serial.println("Paritaetspruefung fehlgeschlagen");
+		//return -5;
 	}
+	wetterSensor[0] = micros();
+	wetterSensor[1] = wert[2];
+	wetterSensor[2] = wert[0];
 
-	Serial.println(wertSensor[0]);
-	Serial.println(wertSensor[2]);
+	Serial.print("counter: ");
+	Serial.print(counter);
+	Serial.print("counter1: ");
+	Serial.print(counter1);
+	Serial.print(", fehler: ");
+	Serial.print(fehler);
+	Serial.print(", Pausenzeit: ");
+	Serial.print(pausenzeit);
+	Serial.print(", SensorBitWert: ");
+	Serial.println(sensorBitWert);
+	for (i = 0; i < 5; i++) {
+		Serial.print(", Bit ");
+		Serial.print(i);
+		Serial.print(" ");
+		Serial.print(wert[i]);
+		Serial.print(", ");
+	}
+	Serial.print("\nParitaetssumme: ");
+	Serial.println(sum);
+	Serial.print("\nZeitverbrauch: ");
+	Serial.print((micros() - t1) / 1000);
 
-	Feucht = wertSensor[1];
-	Feucht = Feucht / 100 + wertSensor[0];
+	Serial.println("\n\n");
+	delay(2000);		//zwischen den Abfragen etwas Zeit lassen
 
-	Luft = wertSensor[3];
-	Luft = Luft / 100 + wertSensor[2];
-
-	Serial.print("Feuchtigkeit: ");
-	Serial.print(Feucht);
-	Serial.print("%, Lufttemperatur: ");
-	Serial.print(Luft);
-	Serial.println("°C");
-
-	FeuchtLuftDDR = (1 << pin);   // als Ausgang setzen
-
+	return 0;
 }
 
-void DHT11Abfrage(int pin) {
+void lcdAnzeige() {
 	lcd.clear();
-	int chk = DHT11.read(pin);
-	Serial.print("Read sensor: ");
-	switch (chk)
-	{
-	case 0: Serial.println("OK"); break;
-	case -1: Serial.println("Checksum error"); break;
-	case -2: Serial.println("Time out error"); break;
-	default: Serial.println("Unknown error"); break;
-	}
 
-	Serial.print("Humidity (%): ");
-	Serial.println((float)DHT11.humidity, 2);
-
-	Serial.print("Temperature (oC): ");
-	Serial.println((float)DHT11.temperature, 2);
-
-	//Werte drucken
+	//Werte auf LCD drucken
 	lcd.setCursor(0, 0);
 	lcd.print("Luftf.: ");
 	lcd.setCursor(10, 0);
-	lcd.print((float)DHT11.humidity);
+	lcd.print(wetterSensor[2]);
 	lcd.setCursor(0, 1);
 	lcd.print("Temp.: ");
 	lcd.setCursor(10, 1);
-	lcd.print((float)DHT11.temperature);
+	lcd.print(wetterSensor[0]);
 }
