@@ -46,8 +46,6 @@ void loop() {
 	// Anzeige auf Display
 	lcdAnzeige();
 
-
-
 }
 
 int feuchtLuftAbfrage(int pin) {
@@ -56,7 +54,7 @@ int feuchtLuftAbfrage(int pin) {
 	int bitwert = 7;	//Bit der einzelnen Bytes der Sensorwertes
 
 	// Hilfsvariablen
-	int timercounter = 10000;
+	int timercounter = 100;
 	int counter = 0;
 	float t = 0, t1 = 0;	//Zeitabfrage
 	int i = 0, j = 0;		//Schleifenvariablen
@@ -83,46 +81,35 @@ int feuchtLuftAbfrage(int pin) {
 	DDRD &= ~(1 << FeuchtLuftPD);	// PIN als Eingang setzen
 	//PORTD &= ~(1 << FeuchtLuftPD);	// Pull-Up-Widerstand am Arduino nicht setzen, da am Sensor vorhanden (invertiere den Port und setze mit Register PORTD zusammen)
 
-	//pinMode(pin, INPUT);
-
-	//Sensor auf Antwort abfragen
-	t = micros();
-
-	sensorBitWert = (pin & (1 << pin));
-
-	// while ((pin & (1 << pin)) == 0) { //ist Sensor auf LOW-Signal?
-	while ((digitalRead(pin)) == LOW) {	//ist Sensor auf LOW-Signal?
-		counter1++;
-		delayMicroseconds(1);
-		if (timercounter-- == 0) {
-			fehler = -1;
-			break;
-			//return fehler;
+	//Sensorantwort auswerten
+	for (i = 0; i <= 1; i++) {	//Antwort vom Sensor: 1. Bit ist LOW, 2. Bit ist HIGH
+		timercounter = 100;
+		counter = 0;
+		t = micros();
+		delayMicroseconds(5);	//Umschaltung zwischen Aus- und Eingang; LOW-Setzen vom Sensor
+		sensorBitWert = ((PIND & (1 << pin)) >> pin);
+		while (sensorBitWert == i) { //ist Sensor auf LOW-Signal?
+			sensorBitWert = ((PIND & (1 << pin)) >> pin);
+			counter++;
+			delayMicroseconds(3);
+			if (timercounter-- == 0) {
+				fehler = -1;
+				break;
+				//return fehler;
+			}
 		}
+		counter = micros() - t;
 	}
-	counter1 = micros() - t;
 
-	timercounter = 10000;
-	counter = 0;
-
-	t1 = micros();
-	t = micros();
-	while ((digitalRead(pin)) == HIGH) {		//ist Sensor auf HIGH-Signal?
-		counter++;
-		if (timercounter-- == 0) {
-			fehler = -2;
-			break;
-			//return fehler;
-		}
-	}
-	counter += micros() - t;
-
+	// Datenbits auswerten
 	for (i = 0; i < 5; i++) {
 		for (j = 7; j >= 0; j--) {
+			//Pausenzeit zwischen den Datenbits ist 50µs
 			timercounter == 10000;
 			t = micros();
-			//Pausenzeit ist 50µs
-			while ((digitalRead(pin)) == LOW) {		//ist Sensor auf LOW-Signal?
+			sensorBitWert = ((PIND & (1 << pin)) >> pin);
+			while (sensorBitWert == 0) { //ist Sensor auf LOW-Signal?
+				sensorBitWert = (PIND & (1 << pin));
 				if (timercounter-- == 0) {
 					fehler = -3;
 					break;
@@ -131,17 +118,20 @@ int feuchtLuftAbfrage(int pin) {
 			}
 			pausenzeit = micros() - t;
 
+			timercounter = 10000;
 			t = micros();
-			while ((digitalRead(pin)) == HIGH) {		//ist Sensor auf LOW-Signal?
+			sensorBitWert = ((PIND & (1 << pin)) >> pin);
+			while (sensorBitWert != 0) {		//ist Sensor auf HIGH-Signal?
+				sensorBitWert = ((PIND & (1 << pin)) >> pin);
 				if (timercounter-- == 0) {
-					fehler = -3;
+					fehler = -4;
 					break;
 					//return fehler;
 				}
 			}
 
 			// gesendetes BIT HIGH?
-			if ((micros() - t) >= 60) {
+			if ((micros() - t) >= 40) {
 				wert[i] |= (1 << j);
 			}
 		}
@@ -157,6 +147,7 @@ int feuchtLuftAbfrage(int pin) {
 	wetterSensor[1] = wert[2];
 	wetterSensor[2] = wert[0];
 
+	// Anzeige zur Fehlereingrenzung
 	Serial.print("counter: ");
 	Serial.print(counter);
 	Serial.print("counter1: ");
@@ -180,7 +171,9 @@ int feuchtLuftAbfrage(int pin) {
 	Serial.print((micros() - t1) / 1000);
 
 	Serial.println("\n\n");
-	delay(2000);		//zwischen den Abfragen etwas Zeit lassen
+
+	//zwischen den Abfragen etwas Zeit lassen
+	delay(2000);
 
 	return 0;
 }
