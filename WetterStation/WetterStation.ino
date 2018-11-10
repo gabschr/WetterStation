@@ -16,7 +16,10 @@ LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
 #define ledPD			PB5 //PIN fuer LED
 
 // für die Daten Feuchtigkeit und Temperatur
-float wetterSensor[3]; //Sensor fuer Temp und Feuchtigkeit (0. Wert: Zeitstempel (ab Start vom Arduino in µs), 1.Wert: Feucht, 2.Wert: Temp 
+float wetterSensor[3]; //Sensor fuer Temp und Feuchtigkeit (0. Wert: Zeitstempel (ab Start vom Arduino in µs), 1.Wert: Feucht, 2.Wert: Temp
+
+int32_t abrufIntervallSekunden = 10;
+int32_t letzteMesszeitpunkt = -abrufIntervallSekunden;
 
 void setup() {
 	//LCD Dispay initialisieren
@@ -38,20 +41,17 @@ void loop() {
 	PORTD &= ~(1 << ledPD);	// LED auf LOW setzen
 
 	// abrufen der Daten
-	feuchtLuftAbfrage(FeuchtLuftPD);
+	int32_t aktuelleZeitpunkt = millis();
+	Serial.println(aktuelleZeitpunkt);
+	Serial.println(letzteMesszeitpunkt/1000);
+	if ((aktuelleZeitpunkt - letzteMesszeitpunkt) < abrufIntervallSekunden) {
+		feuchtLuftAbfrage(FeuchtLuftPD);
+		letzteMesszeitpunkt = millis();
+	}
 
-	// Anzeige auf Seriellen Monitor
-	Serial.print("Sensor-Daten:\nZeit: ");
-	Serial.print(wetterSensor[0] / 1000);
-	Serial.print("ms, Temperatur: ");
-	Serial.print(wetterSensor[1]);
-	Serial.print(", Feuchtigkeit: ");
-	Serial.print(wetterSensor[2]);
-	Serial.println("\n\n");
-
-	// Anzeige auf Display
+	// Ausgabe der Werte
+	serielleAnzeige();
 	lcdAnzeige();
-
 }
 
 int feuchtLuftAbfrage(int pin) {
@@ -179,14 +179,22 @@ int feuchtLuftAbfrage(int pin) {
 	Serial.println("\n\n");
 
 	//zwischen den Abfragen etwas Zeit lassen
-	delay(2000);
-
 	return 0;
+}
+
+void serielleAnzeige() {
+	// Anzeige auf Seriellen Monitor
+	Serial.print("Sensor-Daten:\nZeit: ");
+	Serial.print(wetterSensor[0] / 1000);
+	Serial.print("ms, Temperatur: ");
+	Serial.print(wetterSensor[1]);
+	Serial.print(", Feuchtigkeit: ");
+	Serial.print(wetterSensor[2]);
+	Serial.println("\n\n");
 }
 
 void lcdAnzeige() {
 	lcd.clear();
-
 	//Werte auf LCD drucken
 	lcd.setCursor(0, 0);
 	lcd.print("Luftf.: ");
