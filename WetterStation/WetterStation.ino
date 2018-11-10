@@ -12,7 +12,8 @@
 LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
 
 // Deklaration der PINS
-#define FeuchtLuftPD	PD3	//PIN für den Feuchtigkeits- und Temp- Sensor
+#define FeuchtLuftPD	PD3	//PIN fuer den Feuchtigkeits- und Temp- Sensor
+#define ledPD			PB5 //PIN fuer LED
 
 // für die Daten Feuchtigkeit und Temperatur
 float wetterSensor[3]; //Sensor fuer Temp und Feuchtigkeit (0. Wert: Zeitstempel (ab Start vom Arduino in µs), 1.Wert: Feucht, 2.Wert: Temp 
@@ -28,9 +29,14 @@ void setup() {
 	Serial.println("------------------");
 
 	DDRD |= (1 << FeuchtLuftPD);   // als Ausgang setzen (ODER-Verknuepfung mit PIN)
+	DDRB |= (1 << ledPD);			// als Ausgang
 }
 
 void loop() {
+	// LED
+	DDRB |= (1 << ledPD);			// als Ausgang
+	PORTD &= ~(1 << ledPD);	// LED auf LOW setzen
+
 	// abrufen der Daten
 	feuchtLuftAbfrage(FeuchtLuftPD);
 
@@ -189,5 +195,5 @@ void lcdAnzeige() {
 	lcd.setCursor(0, 1);
 	lcd.print("Temp.: ");
 	lcd.setCursor(10, 1);
-	lcd.print(wetterSensor[0]);
+	lcd.print(wetterSensor[1]);
 }
