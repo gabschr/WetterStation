@@ -4,6 +4,10 @@
  Author:	HN und GS
 */
 
+//Debug Modus
+#define DEBUG 1 //auskommentieren fÃ¼r reale Nutzung
+
+
 //Display - Bibliotheken
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
@@ -15,18 +19,19 @@ LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
 #define FeuchtLuftPD	PD3	//PIN fuer den Feuchtigkeits- und Temp- Sensor
 #define ledPD			PB5 //PIN fuer LED
 
-// für die Daten Feuchtigkeit und Temperatur
-float wetterSensor[3]; //Sensor fuer Temp und Feuchtigkeit (0. Wert: Zeitstempel (ab Start vom Arduino in µs), 1.Wert: Feucht, 2.Wert: Temp 
+// fï¿½r die Daten Feuchtigkeit und Temperatur
+float wetterSensor[3]; //Sensor fuer Temp und Feuchtigkeit (0. Wert: Zeitstempel (ab Start vom Arduino in ï¿½s), 1.Wert: Feucht, 2.Wert: Temp 
 
 void setup() {
 	//LCD Dispay initialisieren
 	lcd.begin(16, 2);
 	lcd.clear();
 
-	//Temperatur && Feuchtigkeit
-	Serial.begin(9600);
-	Serial.println("\n\nAusgabe am Monitor");
-	Serial.println("------------------");
+  #ifdef DEBUG
+    Serial.begin(9600);
+  	Serial.println("\n\nAusgabe am Monitor");
+  	Serial.println("------------------");
+  #endif
 
 	DDRD |= (1 << FeuchtLuftPD);   // als Ausgang setzen (ODER-Verknuepfung mit PIN)
 	DDRB |= (1 << ledPD);			// als Ausgang
@@ -40,15 +45,17 @@ void loop() {
 	// abrufen der Daten
 	feuchtLuftAbfrage(FeuchtLuftPD);
 
-	// Anzeige auf Seriellen Monitor
-	Serial.print("Sensor-Daten:\nZeit: ");
-	Serial.print(wetterSensor[0] / 1000);
-	Serial.print("ms, Temperatur: ");
-	Serial.print(wetterSensor[1]);
-	Serial.print(", Feuchtigkeit: ");
-	Serial.print(wetterSensor[2]);
-	Serial.println("\n\n");
-
+  #ifdef DEBUG
+  	// Anzeige auf Seriellen Monitor
+  	Serial.print("Sensor-Daten:\nZeit: ");
+  	Serial.print(wetterSensor[0] / 1000);
+  	Serial.print("ms, Temperatur: ");
+  	Serial.print(wetterSensor[1]);
+  	Serial.print(", Feuchtigkeit: ");
+  	Serial.print(wetterSensor[2]);
+  	Serial.println("\n\n");
+  #endif
+  
 	// Anzeige auf Display
 	lcdAnzeige();
 
@@ -75,9 +82,11 @@ int feuchtLuftAbfrage(int pin) {
 		wert[i] = 0;
 	}
 
-	Serial.print("Sensor-Abfrage ");
-	Serial.println(pin);
-
+  #ifdef DEBUG
+	  Serial.print("Sensor-Abfrage ");
+	  Serial.println(pin);
+  #endif
+	
 	// Sensor starten - PIN als Ausgang verwenden (laut Datenblatt)
 	DDRD |= (1 << FeuchtLuftPD);	// als Ausgang setzen
 	PORTD &= ~(1 << FeuchtLuftPD);	// auf LOW setzen (invertiere den Port und setze mit Register PORTD zusammen)
@@ -110,7 +119,7 @@ int feuchtLuftAbfrage(int pin) {
 	// Datenbits auswerten
 	for (i = 0; i < 5; i++) {
 		for (j = 7; j >= 0; j--) {
-			//Pausenzeit zwischen den Datenbits ist 50µs
+			//Pausenzeit zwischen den Datenbits ist 50ï¿½s
 			timercounter == 10000;
 			t = micros();
 			sensorBitWert = ((PIND & (1 << pin)) >> pin);
@@ -143,40 +152,42 @@ int feuchtLuftAbfrage(int pin) {
 		}
 	}
 
+  
 	//Paritaetspruefung
 	int sum = wert[0] + wert[1] + wert[2] + wert[3];
-	if (sum != wert[4]) {
-		Serial.println("Paritaetspruefung fehlgeschlagen");
-		//return -5;
-	}
-	wetterSensor[0] = micros();
-	wetterSensor[1] = wert[2];
-	wetterSensor[2] = wert[0];
-
-	// Anzeige zur Fehlereingrenzung
-	Serial.print("counter: ");
-	Serial.print(counter);
-	Serial.print("counter1: ");
-	Serial.print(counter1);
-	Serial.print(", fehler: ");
-	Serial.print(fehler);
-	Serial.print(", Pausenzeit: ");
-	Serial.print(pausenzeit);
-	Serial.print(", SensorBitWert: ");
-	Serial.println(sensorBitWert);
-	for (i = 0; i < 5; i++) {
-		Serial.print(", Bit ");
-		Serial.print(i);
-		Serial.print(" ");
-		Serial.print(wert[i]);
-		Serial.print(", ");
-	}
-	Serial.print("\nParitaetssumme: ");
-	Serial.println(sum);
-	Serial.print("\nZeitverbrauch: ");
-	Serial.print((micros() - t1) / 1000);
-
-	Serial.println("\n\n");
+  wetterSensor[0] = micros();
+  wetterSensor[1] = wert[2];
+  wetterSensor[2] = wert[0];
+  
+  #ifdef DEBUG
+  	if (sum != wert[4]) {
+  		Serial.println("Paritaetspruefung fehlgeschlagen");
+  		//return -5;
+  	}
+  	// Anzeige zur Fehlereingrenzung
+  	Serial.print("counter: ");
+  	Serial.print(counter);
+  	Serial.print("counter1: ");
+  	Serial.print(counter1);
+  	Serial.print(", fehler: ");
+  	Serial.print(fehler);
+  	Serial.print(", Pausenzeit: ");
+  	Serial.print(pausenzeit);
+  	Serial.print(", SensorBitWert: ");
+  	Serial.println(sensorBitWert);
+  	for (i = 0; i < 5; i++) {
+  		Serial.print(", Bit ");
+  		Serial.print(i);
+  		Serial.print(" ");
+  		Serial.print(wert[i]);
+  		Serial.print(", ");
+  	}
+  	Serial.print("\nParitaetssumme: ");
+  	Serial.println(sum);
+  	Serial.print("\nZeitverbrauch: ");
+  	Serial.print((micros() - t1) / 1000);
+  	Serial.println("\n\n");
+  #endif
 
 	//zwischen den Abfragen etwas Zeit lassen
 	delay(2000);
