@@ -5,8 +5,10 @@
 */
 
 //Debug Modus
-#define DEBUG 1 //auskommentieren für reale Nutzung
+#define DEBUG 1 //auskommentieren fï¿½r reale Nutzung
 
+//EEPROM initalisieren
+#include <EEPROM.h>
 
 //Display - Bibliotheken
 #include <Wire.h>
@@ -20,8 +22,8 @@ LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
 #define ledPD			PB5 //PIN fuer LED
 
 // Globale Variablen festlegen
-double wetterSensor[3]; //Sensor fuer Temp und Feuchtigkeit (0. Wert: Zeitstempel (ab Start vom Arduino in µs), 1.Wert: Feucht, 2.Wert: Temp
-
+double wetterSensor[3]; //Sensor fuer Temp und Feuchtigkeit (0. Wert: Zeitstempel (ab Start vom Arduino in ï¿½s), 1.Wert: Feucht, 2.Wert: Temp
+unsigned int eepromMaximum = 0;
 int32_t abrufIntervallSekunden = 5;
 int32_t letzteMesszeitpunkt = 0;
 
@@ -30,10 +32,16 @@ void setup() {
 	lcd.begin(16, 2);
 	lcd.clear();
 
+  //maximalen Rom ermitteln
+  eepromMaximum = E2END + 1;
+  
   #ifdef DEBUG
     Serial.begin(9600);
   	Serial.println("\n\nAusgabe am Monitor");
   	Serial.println("------------------");
+    Serial.print("eepromMaximum = ");
+    Serial.println(eepromMaximum);
+    Serial.println("------------------");
   #endif
 
 	DDRD |= (1 << FeuchtLuftPD);	// als Ausgang setzen (ODER-Verknuepfung mit PIN)
@@ -130,7 +138,7 @@ int feuchtLuftAbfrage(int pin) {
 	// Datenbits auswerten
 	for (i = 0; i < 5; i++) {
 		for (j = 7; j >= 0; j--) {
-			//Pausenzeit zwischen den Datenbits ist 50µs
+			//Pausenzeit zwischen den Datenbits ist 50ï¿½s
 			timercounter == 10000;
 			sensorBitWert = ((PIND & (1 << pin)) >> pin);
 			while (sensorBitWert == 0) { //ist Sensor auf LOW-Signal?
