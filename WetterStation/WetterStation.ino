@@ -250,9 +250,10 @@ void tasterAbfrage() {
   uint8_t i = 0;
   for (i = 0; i <= 1; i++) {
     tasterSens = PINB & (1 << tasterSensor);
-    delay(1);
+	tasterVerl = PINB & (1 << tasterVerlauf);
+	delay(1);
   }
-  if (tasterSens == 0) {  //taster wurde gedrueckt
+  if ((tasterSens == 0) | (tasterVerl == 0)) {  //taster wurde gedrueckt
     PORTB ^= (1 << ledPD);  // LED toggelnd
   }
   delay(1);
