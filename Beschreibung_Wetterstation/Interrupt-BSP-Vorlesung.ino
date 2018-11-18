@@ -15,7 +15,8 @@ bool tasterVorher = 0;
 volatile uint8_t timer2_over = 0; //Timer2 Zeitueberschreitung
 volatile uint8_t portInterruptPD3 = 0;
 
-//byte portWert = 0;	//Wert des Portes
+// Fehlersuche
+uint8_t flankenZaehlen = 0;
 
 // PORTDEKLARATIONEN
 #define ledrtPD	PB5			//PIN fuer rote LED
@@ -85,7 +86,7 @@ ISR(INT1_vect)
 {
 	portInterruptPD3++;
 	PORTB ^= (1 << ledgePD);
-	//Serial.println(portInterruptPD3);
+	flankenZaehlen++;
 }
 
 // Timer0 (Taster)
@@ -182,6 +183,7 @@ void loop(){
 	//taktermittlung();
 }
 
+// ############## ABFRAGEN DES DIGITALEN SENSORS ############################
 int sensorFeuchtTempAbfrage(int pin) {
 	//Zeitintervall der Abfrage ueberpruefen
 	if ((millis() - letzteMesszeitpunkt) < abrufIntervallSekunden * 1000) {
@@ -191,8 +193,6 @@ int sensorFeuchtTempAbfrage(int pin) {
 	}
 
 	letzteMesszeitpunkt = millis();
-	Serial.print("MILLIS ");
-	Serial.println(millis()/1000);
 
 	//Variablen
 	int16_t fehler[6];
@@ -203,12 +203,16 @@ int sensorFeuchtTempAbfrage(int pin) {
 	uint16_t zaehler;
 	uint16_t sum = 0;	//Paritaetssumme
 
+	//Fehlersuche
+	flankenZaehlen = 0;
+
+
 	// BUFFER leeren
-	for (int i = 0; i < 5; i++) {
+	for (i = 0; i < 5; i++) {
 		fehler[i] = 0;
 		wert[i] = 0;
 	}
-	for (int i = 5; i < 10; i++){
+	for (i = 5; i < 10; i++){
 		fehler[i] = 0;
 	}
 
@@ -227,12 +231,18 @@ int sensorFeuchtTempAbfrage(int pin) {
 		}
 		fehler[0] = timer2_over;
 	}
+	TCNT2 = 0;
 	PORTD |= (1 << pin);	// auf HIGH setzen
-	TCNT2 = 0; // setzte timer 0 zurueck
 	timer2_over = 0;
 	zaehler = MAXZAEHL;
+	while (TCNT2 <= 3) {
+		if (zaehler-- <= 0) {
+			fehler[1] = -TCNT2;
+			break;
+		}
+	}
 	//1 count = 2 Mikro-Sekunden -> 40 Mikrosekunden
-	while (TCNT2 < 20) {
+	while (TCNT2 < 22) {
 		if (zaehler-- <= 0) {
 			fehler[1] = -TCNT2;
 			break;
@@ -253,7 +263,7 @@ int sensorFeuchtTempAbfrage(int pin) {
 	zaehler = MAXZAEHL;
 	TCNT2 = 0; // setzte timer 0 zurueck
 	timer2_over = 0;	//Warte 4us
-	while (TCNT2 <= 2){
+	while (TCNT2 <= 1){
 		if (zaehler-- <= 0) {
 			fehler[2] = -TCNT2;
 			break;
@@ -317,71 +327,79 @@ int sensorFeuchtTempAbfrage(int pin) {
 		for (j = 7; j >= 0; j--) {
 			//EICRA |= (1 << ISC11) | (1 << ISC10); //steigende Flanke erzeugt einen Interrupt
 			portInterruptPD3 = 0;
-			zaehler = 0;
+			zaehler = MAXZAEHL;
+			TCNT2 = 0; // setzte timer 0 zurueck
+			timer2_over = 0;
 			//Warte 4us
-			while (TCNT2 <= 1) {
-				if (zaehler++ >= 1000) {
-					fehler[3] = -1;
+			while (TCNT2 <= 2) {
+				if (zaehler-- <= 0) {
+					fehler[5] = -TCNT2;
 					break;
 				}
 			}
 			do {
-				if (zaehler++ >= 1000) {
-					fehler[3] = -5;
+				if (zaehler-- <= 0) {
+					fehler[5] = -TCNT2;
 					break;
 				}
+				fehler[5] = TCNT2;
 			} while (portInterruptPD3 != 0);
 			portInterruptPD3 = 0;
 
 			//Datenbit
 			//EICRA &= ~(1 << ISC10);
 			//EICRA |= (1 << ISC11); //fallende Flanke erzeugt einen Interrupt
+			portInterruptPD3 = 0;
+			zaehler = MAXZAEHL;
 			TCNT2 = 0; // setzte timer 0 zurueck
 			timer2_over = 0;
-			zaehler = 0;
 			//Warte 4us
-			while (TCNT2 <= 1) {
-				if (zaehler++ >= 1000) {
-					fehler[3] = -1;
+			while (TCNT2 <= 2) {
+				if (zaehler-- <= 0) {
+					fehler[6] = -TCNT2;
 					break;
 				}
 			}
 			do {
-				if (zaehler++ >= 1000) {
-					fehler[3] = -4;
+				if (zaehler-- <= 0) {
+					fehler[6] = -TCNT2;
 					break;
 				}
+				fehler[6] = TCNT2;
 			} while (portInterruptPD3 != 0);
-			portInterruptPD3 = 0;
-			TCCR2B = 0;
 			zaehler = TCNT2;
-			
+			portInterruptPD3 = 0;
+
 			//gesendetes Bit HIGH?
-			if (zaehler >= 10) {	//4us pro hochgezaehlten Bit
+			if (zaehler >= 20) {	//4us pro hochgezaehlten Bit
 				wert[i] |= (1 << j);
 			}
+			fehler[7] = zaehler;
 		}
 	}
-	
-	// +++++++++++++++++++
-	delay(20);
-	// ++++++++++++++++
+	cli();
+	Serial.print("\nFlanken zaehlen ");
+	Serial.println(flankenZaehlen);
+	sei();
+
+
+	delay(200);
 
 	DDRD |= (1 << feuchtLuftPD);  // als Ausgang setzen
 
 	
+	
 	  //Paritaetspruefung
 	sum = wert[0] + wert[1] + wert[2] + wert[3];
 	if (sum != wert[4]) {
-		fehler[4] = -5;
+		fehler[8] = -5;
 	}
-
-	fehler[5] = fehler[0] + fehler[1] + fehler[2] + fehler[4];
 
 	if (sum != wert[4]) {
 		Serial.println("Paritaetspruefung fehlgeschlagen");
 	}
 	// Anzeige zur Fehlereingrenzung)
+	Serial.println();
 	for (i = 0; i < 10; i++) {
 		Serial.print("Fehler");
 		Serial.print(i);
@@ -402,10 +420,15 @@ int sensorFeuchtTempAbfrage(int pin) {
 	Serial.println(sum);
 	Serial.println("\n\n");
 
+	for (i = 1; i < 10; i++) {
+		if (fehler[i] > 0) {
+			fehler[i] = 0;
+		}
+		fehler[9] += fehler[i];
+	}
 
-
-	if (fehler[5] != 0) {
-		return fehler[5];
+	if (fehler[9] != 0) {
+		return fehler[9];
 	}
 
 	wetterSensor[0] = micros();
