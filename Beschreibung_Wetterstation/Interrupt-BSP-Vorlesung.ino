@@ -128,7 +128,7 @@ void setup() {
 	// ############## INTERRUPTS ######################
 	cli();	//deaktivieren von Interrupts
 
-	// ############### TIMER INTERRUPTS ####################
+	// ----------- TIMER INTERRUPTS -------------------
 	//TIMER0 fuer Entprellen der Taster
 	//TCCR0A = 0; // set TCCR1A register to 0
 	//TCCR0B = 0; // set TCCR1B register to 0
@@ -154,7 +154,7 @@ void setup() {
 	TCCR2B |= (1 << WGM22); // CTC MODUS einstellen
 	TIMSK2 |= (1 << OCIE2A); // timer compare Modus
 
-	// ############## EXTERNAL INTERRUPTS ######################
+	// -------------- EXTERNAL INTERRUPTS ----------------------------
 	// Taster auf PORTB
 	PCICR |= (1 << PCIE0);		// PIN CHANGE INTERRUPT FUER PB-Gruppe (TASTER)
 	PCMSK0 |= (1 << PCINT0);	//Externer Interruppt fuer Port PD2
@@ -173,6 +173,7 @@ void setup() {
 void loop(){
 	millis();
 	sensorFeuchtTempAbfrage(feuchtLuftPD);
+	//sensorDigitalFlankenerkennuung(feuchtLuftPD);
 	if (timer1_over ==1) {
 		Serial.println(timer1_over);
 		Serial.print("OCR1A: ");
@@ -195,7 +196,7 @@ int sensorFeuchtTempAbfrage(int pin) {
 	letzteMesszeitpunkt = millis();
 
 	//Variablen
-	int16_t fehler[6];
+	int16_t fehler[10];
 	int8_t i = 0, j = 0;	//Zaehlervariablen
 	uint8_t wert[5];    //Bytes des Sensorwertes
 	uint8_t bitwert = 7;  //Bit der einzelnen Bytes der Sensorwertes
@@ -275,7 +276,7 @@ int sensorFeuchtTempAbfrage(int pin) {
 			break;
 		}
 		fehler[2] = TCNT2;
-	} while (portInterruptPD3 != 0);
+	} while (portInterruptPD3 == 0);
 
 	//EICRA |= (1 << ISC11) | (1 << ISC10); //steigende Flanke erzeugt einen Interrupt
 	TCNT2 = 0; // setzte timer 0 zurueck
@@ -296,7 +297,7 @@ int sensorFeuchtTempAbfrage(int pin) {
 			break;
 		}
 		fehler[3] = TCNT2;
-	} while (portInterruptPD3 != 0);
+	} while (portInterruptPD3 == 0);
 
 	//-------------------------- 1.Pause zwischen den Bits: 50us ------------------------------------
 	//Pausenzeit zwischen den Datenbits ist 50 Microsekunden
@@ -319,7 +320,7 @@ int sensorFeuchtTempAbfrage(int pin) {
 			break;
 		}
 		fehler[4] = TCNT2;
-	} while (portInterruptPD3 != 0);
+	} while (portInterruptPD3 == 0);
 
 
 	//----------------------------------- ab jetzt kommen die Daten ---------------------------------------
@@ -343,7 +344,7 @@ int sensorFeuchtTempAbfrage(int pin) {
 					break;
 				}
 				fehler[5] = TCNT2;
-			} while (portInterruptPD3 != 0);
+			} while (portInterruptPD3 == 0);
 			portInterruptPD3 = 0;
 
 			//Datenbit
@@ -366,7 +367,7 @@ int sensorFeuchtTempAbfrage(int pin) {
 					break;
 				}
 				fehler[6] = TCNT2;
-			} while (portInterruptPD3 != 0);
+			} while (portInterruptPD3 == 0);
 			zaehler = TCNT2;
 			portInterruptPD3 = 0;
 
@@ -382,8 +383,6 @@ int sensorFeuchtTempAbfrage(int pin) {
 	Serial.println(flankenZaehlen);
 	sei();
 
-
-	delay(200);
 
 	DDRD |= (1 << feuchtLuftPD);  // als Ausgang setzen
 
@@ -438,12 +437,203 @@ int sensorFeuchtTempAbfrage(int pin) {
 	return 0;
 }
 
-// Start des Timers2
-void timer2start() {
-	TCNT2 = 0; // setzte timer 0 zurueck
-	timer2_over = 0;
-//	Serial.println("TIMER2 start");
-}
+
+// ############################# DIGITAL FLANKEN ZAEHLEN #############################
+//int sensorDigitalFlankenerkennuung(uint8_t pin) {
+//	//Zeitintervall der Abfrage ueberpruefen
+//	if ((millis() - letzteMesszeitpunkt) < abrufIntervallSekunden * 1000) {
+//		if (letzteMesszeitpunkt != 0) {
+//			return -99;  // nach Einschalten soll gemessen werden
+//		}
+//	}
+//
+//	letzteMesszeitpunkt = millis();
+//
+//	//Variablen
+//	int16_t fehler[42];
+//	int8_t i = 0, j = 0;	//Zaehlervariablen
+//	uint8_t wert[5];    //Bytes des Sensorwertes
+//	uint8_t bitwert = 7;  //Bit der einzelnen Bytes der Sensorwertes
+//	uint16_t zaehler;
+//	uint16_t zaehler2;
+//	uint16_t sum = 0;	//Paritaetssumme
+//	uint8_t anzLowHigh = 0;
+//	uint8_t zeitZaehlen = 0;
+//	uint8_t bitZustand = 0;
+//
+//	//fehler suchen
+//	flankenZaehlen = 0;
+//
+//	// BUFFER leeren
+//	for (i = 0; i < 5; i++) {
+//		fehler[i] = 0;
+//		wert[i] = 0;
+//	}
+//	for (i = 5; i < 41; i++) {
+//		fehler[i] = 0;
+//	}
+//
+//
+//	//-------------------- Sensor starten - PIN als Ausgang verwenden (laut Datenblatt) ---------------------------
+//	timer2_over = 0;
+//	TCNT2 = 0; // setzte timer 0 zurueck
+//	DDRD |= (1 << pin);	// als Ausgang setzen
+//	PORTD &= ~(1 << pin);	// auf LOW setzen (invertiere den Port und setze mit Register PORTD zusammen
+//	zaehler = MAXZAEHL;
+//	//36*0,5ms = 18ms LOW
+//	while (timer2_over < 36) {
+//		if (zaehler-- <= 0) {
+//			fehler[0] = -timer2_over;
+//			break;
+//		}
+//		fehler[0] = timer2_over;
+//	}
+//	TCNT2 = 0;
+//	PORTD |= (1 << pin);	// auf HIGH setzen
+//	timer2_over = 0;
+//	zaehler = MAXZAEHL;
+//	while (TCNT2 <= 3) {
+//		if (zaehler-- <= 0) {
+//			fehler[1] = -TCNT2;
+//			break;
+//		}
+//	}
+//	//1 count = 2 Mikro-Sekunden -> 40 Mikrosekunden
+//	while (TCNT2 < 22) {
+//		if (zaehler-- <= 0) {
+//			fehler[1] = -TCNT2;
+//			break;
+//		}
+//		fehler[1] = TCNT2;
+//	}
+//
+//	//-------------------------- Sensor quitiert und sendet Daten ---------
+//	cli();
+//	portInterruptPD3 = 0;
+//	DDRD &= ~(1 << pin);	// PIN als Eingang setzen
+//	
+//	//Interrupt einstellen
+//	EIMSK |= (1 << INT1);
+//	EICRA |= (1 << ISC10);	//erkenne Flanke
+//	sei();
+//
+//	i = 0;
+//
+//	zaehler2 = MAXZAEHL;
+//	for (i = 0; i < 40; i++) {
+//		//zaehler = MAXZAEHL;
+//		//TCNT2 = 0; // setzte timer 0 zurueck
+//		//timer2_over = 0;
+//		//do {
+//		//	if (zaehler-- <= 0) {
+//		//		fehler[i] = -TCNT2;
+//		//		break;
+//		//	}
+//		//	fehler[i] = TCNT2;
+//		//} while (portInterruptPD3 != 0);
+//
+//		zaehler = MAXZAEHL;
+//		TCNT2 = 0; // setzte timer 0 zurueck
+//		timer2_over = 0;
+//
+//		do {
+//			if (zaehler-- <= 0) {
+//				fehler[i] = -TCNT2;
+//				break;
+//			}
+//			fehler[i] = TCNT2;
+//		} while (portInterruptPD3 == 0);
+//
+//		zeitZaehlen = TCNT2;
+//		bitZustand = ((PIND & (1 << pin)) >> pin);
+//		anzLowHigh++;
+//		portInterruptPD3 = 0;
+//
+//		//Interrupt einstellen
+//		//EIMSK &= ~(1 << INT1);
+//		//EIMSK |= (1 << INT1);
+//		//EICRA |= (1 << ISC11) | (1 << ISC10);	//erkenne L-H-Flanke
+//		//sei();
+//
+//		//ist das BIT jetzt LOW?
+//		if (bitZustand == 0) {
+//			// angekommenes Bit entweder 1 oder PAUSENZEIT? (<ca.25us und > ca. 65us?)
+//			if ((zeitZaehlen > 33) && (zeitZaehlen < 38)) {
+//				wert[i / 8] |= (1 << (7 - i % 8));
+//			}
+//			// groesser als ca.80us und kleiner als 25us? - "PAUSENZEIT"
+//			if ((zeitZaehlen <= 21) | (zeitZaehlen >= 38)) {
+//				i--;	// PAUSENZEITEN NICHT ALS BIT VERZEICHNEN
+//			}
+//		}
+//		if (bitZustand != 0) {
+//			i--;	// PAUSENZEITEN NICHT ALS BIT VERZEICHNEN
+//		}
+//		zaehler2--;
+//		if (zaehler == 0) {
+//			fehler[i] = -i - 1000;
+//		}
+//	}
+//	
+//	
+//	DDRD |= (1 << feuchtLuftPD);  // als Ausgang setzen
+//
+//
+//
+//	  //Paritaetspruefung
+//	sum = wert[0] + wert[1] + wert[2] + wert[3];
+//	if (sum != wert[4]) {
+//		fehler[40] = -5;
+//	}
+//
+//	if (sum != wert[4]) {
+//		Serial.println("Paritaetspruefung fehlgeschlagen");
+//	}
+//	// Anzeige zur Fehlereingrenzung)
+//	Serial.println();
+//	Serial.print("Fehler");
+//	for (i = 0; i < 40; i++) {
+//		if (i % 8 == 0) {
+//			Serial.println();
+//		}
+//		Serial.print(i);
+//		Serial.print("; ");
+//		Serial.print(fehler[i]);
+//		Serial.print("/ ");
+//	}
+//	Serial.println("\n");
+//	for (i = 0; i < 5; i++) {
+//		Serial.print("Bit ");
+//		Serial.print(i);
+//		Serial.print(" ");
+//		Serial.print(wert[i]);
+//		Serial.println(", ");
+//	}
+//	Serial.print("\nParitaetssumme: ");
+//	Serial.println(sum);
+//	Serial.print("Flanken zaehlen: ");
+//	Serial.println(flankenZaehlen);
+//	Serial.print("Low-HIGH: ");
+//	Serial.println(anzLowHigh);
+//	Serial.println("\n");
+//
+//	for (i = 1; i < 42; i++) {
+//		if (fehler[i] > 0) {
+//			fehler[i] = 0;
+//		}
+//		fehler[41] += fehler[i];
+//	}
+//
+//	if (fehler[41] < 0) {
+//		return fehler[41];
+//	}
+//
+//	wetterSensor[0] = micros();
+//	wetterSensor[1] = wert[2];
+//	wetterSensor[2] = wert[0];
+//
+//	return 0;
+//}
 
 void taktermittlung() {
 	//TCCR2B |= (1 << CS21) | (1 << CS20);	//TIMER0 PRESCALER auf 64 einstellen
