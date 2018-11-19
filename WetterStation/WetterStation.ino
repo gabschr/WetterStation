@@ -429,6 +429,8 @@ int sensorFeuchtTempAbfrage(int pin) {
 	return 0;
 }
 
+
+
 void lcdAnzeige() {
 	lcd.clear();
 
