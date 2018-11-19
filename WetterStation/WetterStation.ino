@@ -18,6 +18,8 @@ double wetterSensor[3]; //Array fuer Temp und Feuchtigkeit (0. Wert: Zeitstempel
 unsigned int eepromMaximum = 0;
 unsigned long abrufIntervallSekunden = 5;
 unsigned long letzteMesszeitpunkt = 0;
+uint8_t timerTaster = 0;
+uint8_t timerLED = 2;
 
 uint8_t timer0_over = 0;
 volatile bool timer1_over = 0;
@@ -25,7 +27,7 @@ volatile uint8_t timer2_over = 0;
 volatile uint8_t portInterruptPD3 = 0;
 
 bool tasterVorher = 0;
-bool tasterSens = 1, tasterVerl = 1;
+bool tasterWert = 1, tasterVerl = 1;
 
 
 // PORTDEKLARATIONEN
@@ -40,30 +42,28 @@ bool tasterSens = 1, tasterVerl = 1;
 // ######################## INTERRUPT SERVICE ROUTINEN ###############################
 
 // Routine zum Abfragen der Taster
-// !!!!!!!!!!!!!!!!!!!!!!!! AENDERN !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ISR(PCINT0_vect) {
 	byte portWert = 0;
 	uint8_t aktuellerTasterWert;
 
-	portWert = PINB;	//welcher Port wurde angesprochen? (8 BIT- pro Taster ein Bit)
+	portWert = PINB;	//welcher Port wurde angesprochen?
 	// wurde Taster gedrueckt?
 	aktuellerTasterWert = (portWert & (1 << taster) >> taster);
-	if (aktuellerTasterWert == 1) {	//wurde taster gedrueckt?
-		// entprellen
-		if (tasterVorher == 0) {	// Taster wurde zum ersten Mal gedrueckt
-			tasterVorher = 1;
-			timer0_over = 0;
-			return;
-		}
-		else {
-			if (timer0_over <= 157) {	//1 Zaehldurchlauf ca. 128 Mikrosekunden
+	if (aktuellerTasterWert == 1) {	//wurde taster angesprochen?
+		tasterWert = (PINB & (1 << taster)) >> taster;
+#ifdef DEBUG
+		Serial.print("Interrupt Taster, Tasterwert: ");
+		Serial.println(tasterWert);
+#endif
+		//wurde gedrueckt? (nicht los gelassen?)
+		if (tasterWert == 1){
+			// entprellen
+			if (tasterVorher == 0) {	// Taster wurde zum ersten Mal gedrueckt
+				tasterVorher = 1;
+				timerTaster = 0;
 				return;
 			}
-			tasterVorher = 0;
 		}
-		PORTB ^= (1 << ledgePD);	//LED ge toggelnd
-		Serial.println("TASTER gedrueckt");
-		TCCR0B = 0;
 	}
 }
 
@@ -95,15 +95,24 @@ ISR(PCINT0_vect) {
 ISR(INT1_vect)
 {
 	portInterruptPD3++;
-	PORTB ^= (1 << ledgePD);
 }
 
 // Timer1 (langsames Blinken)
 ISR(TIMER1_COMPA_vect) {
-	PORTB ^= (1 << ledrtPD);  // LED toggelnd
+	if (tasterVorher > 0) {
+		// 30 ms nach Tastendruck warten, um Prellen auszuschließen
+		if (timerTaster > 0) {
+			PORTB ^= (1 << ledgePD);  // LED toggelnd
+			tasterVorher = 0;
+		}
+	}
+	if (timerLED > 0) {
+		if ((timer1_over/20) % timerLED) {
+			PORTB ^= (1 << ledrtPD);  // LED toggelnd
+		}
+	}
 	timer1_over++;
-	OCR1A -= 1000;
-	OCR1A = OCR1A % 65535;
+	timerTaster++;
 }
 
 // Timer2 (Taster)
@@ -144,12 +153,12 @@ void setup() {
 	// ()()()()()())()()()()() INTERRUPTS ()()()()()()()()()()()()()()()()()()()()
 	cli();	//deaktivieren von Interrupts
 
-	// TIMER1 fuer langsames Blinken der LED
+	// TIMER1 fuer Taster und LED
 	TCCR1A = 0; // TCCR1A register auf 0 setzen
 	TCCR1B = 0; // TCCR1B register auf 0 setzen
 	TCNT1 = 0; // Zaehlerwert zuruecksetzen
-	OCR1A = 65535;	//MAX bei 16-BIT-TIMER: 65535, bei 8-Bit 2 hoch 8 - 1 = 255
-	TCCR1B |= (1 << CS12) | (1 << CS10);
+	OCR1A = 7499;	//MAX bei 16-BIT-TIMER: 65535, bei 8-Bit 2 hoch 8 - 1 = 255
+	TCCR1B |= (1 << CS11) | (1 << CS10);
 	TCCR1B |= (1 << WGM12); // CTC Mode
 	TIMSK1 |= (1 << OCIE1A); // timer compare interrupt aktivieren
 
@@ -282,7 +291,7 @@ int sensorFeuchtTempAbfrage(int pin) {
 	for (i = 0; i < 5; ++i) {
 		// 8 Bits pro Byte Daten (beginn mit MSB)
 		for (j = 7; j >= 0; j--) {
-			//1.BIT: PAUSE, 2. BIT: DATEN:
+			//PAUSE, danach DATEN:
 			for (int k = 5; k < 7; k++) {
 				portInterruptPD3 = 0;
 				zaehler = MAXZAEHL;
