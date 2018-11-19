@@ -14,7 +14,7 @@ LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
 // GLOBALE VARIABLEN
 double wetterSensor[3]; //Array fuer Temp und Feuchtigkeit (0. Wert: Zeitstempel (ab Start vom Arduino in us), 1.Wert: Feucht, 2.Wert: Temp
 unsigned int eepromMaximum = 0;
-unsigned long abrufIntervallSekunden = 10;
+unsigned long abrufIntervallSekunden = 5;
 unsigned long letzteMesszeitpunkt = 0;
 
 uint8_t timer0_over = 0;
@@ -66,28 +66,28 @@ ISR(PCINT0_vect) {
 }
 
 // Routine zum Abfragen von Sensoren nicht am Port D2 und D3
-ISR(PCINT2_vec) { //Sensoren
-	byte portWert = 0;
-	byte statusFeuchtLuftPD = 0;	//Status des Sensors abfragen
-	uint8_t sensorBitWert;  //Variable zum Festhalten des aktuellen Bits am Sensor
-
-	portWert = PIND;	//welcher Port wurde angesprochen? (8 BIT- pro Taster ein Bit)
-	statusFeuchtLuftPD = (portWert & (1 << feuchtLuftPD) >> feuchtLuftPD);	//PORT vom Sensor ermitteln
-
-	Serial.println("Interrupt Sensor");
-
-	if (statusFeuchtLuftPD != 0) {
-		if (portInterruptPD3 == 0) {
-			portInterruptPD3 = 1;
-			return;
-		}
-		else {
-			portInterruptPD3 = 0;
-			return;
-		}
-	}
-
-}
+//ISR(PCINT2_vec) { //Sensoren
+//	byte portWert = 0;
+//	byte statusFeuchtLuftPD = 0;	//Status des Sensors abfragen
+//	uint8_t sensorBitWert;  //Variable zum Festhalten des aktuellen Bits am Sensor
+//
+//	portWert = PIND;	//welcher Port wurde angesprochen? (8 BIT- pro Taster ein Bit)
+//	statusFeuchtLuftPD = (portWert & (1 << feuchtLuftPD) >> feuchtLuftPD);	//PORT vom Sensor ermitteln
+//
+//	Serial.println("Interrupt Sensor");
+//
+//	if (statusFeuchtLuftPD != 0) {
+//		if (portInterruptPD3 == 0) {
+//			portInterruptPD3 = 1;
+//			return;
+//		}
+//		else {
+//			portInterruptPD3 = 0;
+//			return;
+//		}
+//	}
+//
+//}
 
 // Abfragen des Sensors am Port D3 (DHT11)
 ISR(INT1_vect)
@@ -123,6 +123,9 @@ void setup() {
 	Serial.println(eepromMaximum);
 	Serial.println("------------------");
 #endif
+
+	//LCD-Display aktivieren
+	lcd.begin(20, 4);
 
 	// Deklarieren der I-O-Ports und Setzen der Pegel
 	DDRB |= (1 << ledrtPD);     // als Ausgang
@@ -161,9 +164,9 @@ void setup() {
 	PCICR |= (1 << PCIE0);		// PIN CHANGE INTERRUPT FUER PB-Gruppe (TASTER)
 	PCMSK0 |= (1 << PCINT0);	//Externer Interruppt fuer Port PD2
 
-	// Interrupt auf PORTD-Gruppe (Sensoren)
-	PCICR |= (1 << PCIE2);
-	PCMSK2 |= (1 << PCINT2);
+	//// Interrupt auf PORTD-Gruppe (Sensoren)
+	//PCICR |= (1 << PCIE2);
+	//PCMSK2 |= (1 << PCINT2);
 
 	// Interrupt auf PORT PD3 (Sensor DHT11)
 	EICRA |= (1 << ISC10); //fallende und steigende Flanke erzeugt einen Interrupt
@@ -213,7 +216,7 @@ int sensorFeuchtTempAbfrage(int pin) {
 
 	// BUFFER leeren
 	for (i = 0; i < 5; i++) {
-		kontrolle[i] = 0;
+		wert[i] = 0;
 	}
 	for (i = 0; i < 10; i++) {
 		kontrolle[i] = 0;
@@ -226,7 +229,7 @@ int sensorFeuchtTempAbfrage(int pin) {
 	PORTD &= ~(1 << pin);	// auf LOW setzen
 	zaehler = MAXZAEHL;
 
-	//36*0,5ms = 18ms LOW
+	//36*0,5ms (Zaehldauer Timer2) = 18ms LOW
 	while (timer2_over < 36) {
 		if (zaehler-- <= 0) {
 			kontrolle[0] = -timer2_over;
@@ -238,12 +241,6 @@ int sensorFeuchtTempAbfrage(int pin) {
 	PORTD |= (1 << pin);	// auf HIGH setzen
 	timer2_over = 0;
 	zaehler = MAXZAEHL;
-	while (TCNT2 <= 3) {
-		if (zaehler-- <= 0) {
-			kontrolle[1] = -TCNT2;
-			break;
-		}
-	}
 	//1 count = 2 Mikro-Sekunden -> 40 Mikrosekunden
 	while (TCNT2 < 22) {
 		if (zaehler-- <= 0) {
@@ -260,125 +257,55 @@ int sensorFeuchtTempAbfrage(int pin) {
 	EICRA |= (1 << ISC10);
 	sei();
 
-	// ------------------------- Antwort vom Sensor: 1. Bit ist LOW, 2. Bit ist HIGH ---------------------------------
-	portInterruptPD3 = 0;
-	zaehler = MAXZAEHL;
-	TCNT2 = 0; // setzte timer 0 zurueck
-	timer2_over = 0;	//Warte 4us
-	while (TCNT2 <= 1) {
-		if (zaehler-- <= 0) {
-			kontrolle[2] = -TCNT2;
-			break;
-		}
-	}
-	do {
-		if (zaehler-- <= 0) {
-			kontrolle[2] = -TCNT2;
-			break;
-		}
-		kontrolle[2] = TCNT2;
-	} while (portInterruptPD3 == 0);
+	// ------------------------- Antwort vom Sensor: 1. Bit ist LOW, 2. Bit ist HIGH, 3. Bit LOW: PAUSE -------------------------------
+	for (i = 2; i < 4; i++) {
+		TCNT2 = 0; // setzte timer 0 zurueck
+		timer2_over = 0;
+		portInterruptPD3 = 0;
+		zaehler = MAXZAEHL;
 
-	//EICRA |= (1 << ISC11) | (1 << ISC10); //steigende Flanke erzeugt einen Interrupt
-	TCNT2 = 0; // setzte timer 0 zurueck
-	timer2_over = 0;
-	portInterruptPD3 = 0;
-	zaehler = MAXZAEHL;
-	//Warte 4us
-	while (TCNT2 <= 2) {
-		if (zaehler-- <= 0) {
-			kontrolle[3] = -TCNT2;
-			break;
-		}
+		do {
+			if (zaehler-- <= 0) {
+				kontrolle[i] = -TCNT2;
+				break;
+			}
+			kontrolle[i] = TCNT2;
+		} while (portInterruptPD3 == 0);
 	}
-	zaehler = MAXZAEHL;
-	do {
-		if (zaehler-- <= 0) {
-			kontrolle[3] = -TCNT2;
-			break;
-		}
-		kontrolle[3] = TCNT2;
-	} while (portInterruptPD3 == 0);
-
-	//-------------------------- 1.Pause zwischen den Bits: 50us ------------------------------------
-	//Pausenzeit zwischen den Datenbits ist 50 Microsekunden
-	//EICRA &= ~(1 << ISC10);
-	//EICRA |= (1 << ISC11); //fallende Flanke erzeugt einen Interrupt
-	portInterruptPD3 = 0;
-	zaehler = MAXZAEHL;
-	TCNT2 = 0; // setzte timer 0 zurueck
-	timer2_over = 0;
-	//Warte 4us
-	while (TCNT2 <= 2) {
-		if (zaehler-- <= 0) {
-			kontrolle[4] = -TCNT2;
-			break;
-		}
-	}
-	do {
-		if (zaehler-- <= 0) {
-			kontrolle[4] = -TCNT2;
-			break;
-		}
-		kontrolle[4] = TCNT2;
-	} while (portInterruptPD3 == 0);
 
 
 	//----------------------------------- ab jetzt kommen die Daten ---------------------------------------
-	for (i = 0; i < 5; i++) {
+	// 5 BYTES Daten
+	for (i = 0; i < 5; ++i) {
+		// 8 Bits pro Byte Daten (beginn mit MSB)
 		for (j = 7; j >= 0; j--) {
-			portInterruptPD3 = 0;
-			zaehler = MAXZAEHL;
-			TCNT2 = 0; // setzte timer 0 zurueck
-			timer2_over = 0;
-			//Warte 4us
-			while (TCNT2 <= 2) {
-				if (zaehler-- <= 0) {
-					kontrolle[5] = -TCNT2;
-					break;
-				}
+			//1.BIT: PAUSE, 2. BIT: DATEN:
+			for (int k = 5; k < 7; k++) {
+				portInterruptPD3 = 0;
+				zaehler = MAXZAEHL;
+				TCNT2 = 0; // setzte timer 0 zurueck
+				timer2_over = 0;
+				do {
+					if (zaehler-- <= 0) {
+						kontrolle[k] = -TCNT2;
+						break;
+					}
+					kontrolle[k] = TCNT2;
+				} while (portInterruptPD3 == 0);
+				portInterruptPD3 = 0;
 			}
-			do {
-				if (zaehler-- <= 0) {
-					kontrolle[5] = -TCNT2;
-					break;
-				}
-				kontrolle[5] = TCNT2;
-			} while (portInterruptPD3 == 0);
-			portInterruptPD3 = 0;
-
-			portInterruptPD3 = 0;
-			zaehler = MAXZAEHL;
-			TCNT2 = 0; // setzte timer 0 zurueck
-			timer2_over = 0;
-			//Warte 4us
-			while (TCNT2 <= 2) {
-				if (zaehler-- <= 0) {
-					kontrolle[6] = -TCNT2;
-					break;
-				}
-			}
-			do {
-				if (zaehler-- <= 0) {
-					kontrolle[6] = -TCNT2;
-					break;
-				}
-				kontrolle[6] = TCNT2;
-			} while (portInterruptPD3 == 0);
-			zaehler = TCNT2;
+			sum = TCNT2;
 			portInterruptPD3 = 0;
 
 			//gesendetes Bit HIGH?
-			if (zaehler >= 20) {	//4us pro hochgezaehlten Bit
+			if (sum >= 20) {	//4us pro hochgezaehlten Bit
 				wert[i] |= (1 << j);
 			}
-			kontrolle[7] = zaehler;
+			kontrolle[7] = sum;
 		}
 	}
-
 	DDRD |= (1 << feuchtLuftPD);  // als Ausgang setzen
-
-	  //Paritaetspruefung
+	//Paritaetspruefung
 	sum = wert[0] + wert[1] + wert[2] + wert[3];
 	if (sum != wert[4]) {
 		kontrolle[8] = -5;
