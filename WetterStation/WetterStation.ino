@@ -208,26 +208,24 @@ int sensorFeuchtTempAbfrage(int pin) {
 	int8_t i = 0, j = 0;	//Zaehlervariablen
 	uint8_t wert[5];    //Bytes des Sensorwertes
 	uint8_t bitwert = 7;  //Bit der einzelnen Bytes der Sensorwertes
-	uint8_t sensorBitWert;  //Variable zum Festhalten des aktuellen Bits am Sensor
 	uint16_t zaehler;
 	uint16_t sum = 0;	//Paritaetssumme
 
 	// BUFFER leeren
 	for (i = 0; i < 5; i++) {
 		kontrolle[i] = 0;
-		wert[i] = 0;
 	}
-	for (i = 5; i < 10; i++) {
+	for (i = 0; i < 10; i++) {
 		kontrolle[i] = 0;
 	}
-
 
 	//-------------------- Sensor starten - PIN als Ausgang verwenden (laut Datenblatt) ---------------------------
 	timer2_over = 0;
 	TCNT2 = 0; // setzte timer 0 zurueck
 	DDRD |= (1 << pin);	// als Ausgang setzen
-	PORTD &= ~(1 << pin);	// auf LOW setzen (invertiere den Port und setze mit Register PORTD zusammen
+	PORTD &= ~(1 << pin);	// auf LOW setzen
 	zaehler = MAXZAEHL;
+
 	//36*0,5ms = 18ms LOW
 	while (timer2_over < 36) {
 		if (zaehler-- <= 0) {
@@ -263,7 +261,6 @@ int sensorFeuchtTempAbfrage(int pin) {
 	sei();
 
 	// ------------------------- Antwort vom Sensor: 1. Bit ist LOW, 2. Bit ist HIGH ---------------------------------
-	//EICRA |= (1 << ISC11); //fallende Flanke erzeugt einen Interrupt
 	portInterruptPD3 = 0;
 	zaehler = MAXZAEHL;
 	TCNT2 = 0; // setzte timer 0 zurueck
@@ -400,12 +397,11 @@ int sensorFeuchtTempAbfrage(int pin) {
 		Serial.print(kontrolle[i]);
 		Serial.println(", ");
 	}
-	Serial.print(", SensorBitWert: ");
-	Serial.println(sensorBitWert);
+	Serial.println("\nBitwerte:\n------------");
 	for (i = 0; i < 5; i++) {
-		Serial.print("Bit ");
+		Serial.print("Bit");
 		Serial.print(i);
-		Serial.print(" ");
+		Serial.print(" - ");
 		Serial.print(wert[i]);
 		Serial.println(", ");
 	}
