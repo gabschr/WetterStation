@@ -1,12 +1,5 @@
-/*
- Name:		WetterStation.ino
- Created:	02.11.2018 18:37:17
- Author:	HN und GS
-*/
-
 //Debug Modus
 #define DEBUG 1 //auskommentieren für reale Nutzung
-
 
 //Display - Bibliotheken
 #include <Wire.h>
@@ -15,75 +8,194 @@
 //Display auf Port initalisieren
 LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
 
-// Deklaration der PINS
-#define FeuchtLuftPD  PD3 //PIN fuer den Feuchtigkeits- und Temp- Sensor
-#define dht22Sensor   PD4 //PIN fuer DHT22-Sensor (Feuchtigkeit+Temp)
-#define ledPD     PB5 //PIN fuer LED
-#define tasterSensor  PB0 //PIN fuer Taster zum Umschalten der Sensoren (PIN 8)
-#define tasterVerlauf PB1 //PIN fuer Taster zum Abfragen der historischen Daten (PIN 9)
+//Konstanten
+#define MAXZAEHL 65000
 
-// Globale Variablen festlegen
-double wetterSensor[3]; //Sensor fuer Temp und Feuchtigkeit (0. Wert: Zeitstempel (ab Start vom Arduino in ï¿½s), 1.Wert: Feucht, 2.Wert: Temp
+// GLOBALE VARIABLEN
+double wetterSensor[3]; //Array fuer Temp und Feuchtigkeit (0. Wert: Zeitstempel (ab Start vom Arduino in us), 1.Wert: Feucht, 2.Wert: Temp
 unsigned int eepromMaximum = 0;
+unsigned long abrufIntervallSekunden = 10;
+unsigned long letzteMesszeitpunkt = 0;
 
-int32_t abrufIntervallSekunden = 5;
-int32_t letzteMesszeitpunkt = 0;
+uint8_t timer0_over = 0;
+volatile bool timer1_over = 0;
+volatile uint8_t timer2_over = 0;
+volatile uint8_t portInterruptPD3 = 0;
 
+bool tasterVorher = 0;
 bool tasterSens = 1, tasterVerl = 1;
 
+
+// PORTDEKLARATIONEN
+#define ledrtPD	PB5			//PIN fuer rote LED
+#define ledgePD	PB4			//PIN fuer geldbe 
+#define taster  PB0			//PIN fuer Taster zum Umschalten der Sensoren (PIN8)
+#define feuchtLuftPD  PD3	//PIN fuer den Feuchtigkeits- und Temp- Sensor (PIN3)
+#define dht22Sensor   PD4	//PIN fuer DHT22-Sensor (Feuchtigkeit+Temp)
+
+
+
+// ######################## INTERRUPT SERVICE ROUTINEN ###############################
+
+// Routine zum Abfragen der Taster
+// !!!!!!!!!!!!!!!!!!!!!!!! AENDERN !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+ISR(PCINT0_vect) {
+	byte portWert = 0;
+	uint8_t aktuellerTasterWert;
+
+	portWert = PINB;	//welcher Port wurde angesprochen? (8 BIT- pro Taster ein Bit)
+	// wurde Taster gedrueckt?
+	aktuellerTasterWert = (portWert & (1 << taster) >> taster);
+	if (aktuellerTasterWert == 1) {	//wurde taster gedrueckt?
+		// entprellen
+		if (tasterVorher == 0) {	// Taster wurde zum ersten Mal gedrueckt
+			tasterVorher = 1;
+			timer0_over = 0;
+			return;
+		}
+		else {
+			if (timer0_over <= 157) {	//1 Zaehldurchlauf ca. 128 Mikrosekunden
+				return;
+			}
+			tasterVorher = 0;
+		}
+		PORTB ^= (1 << ledgePD);	//LED ge toggelnd
+		Serial.println("TASTER gedrueckt");
+		TCCR0B = 0;
+	}
+}
+
+// Routine zum Abfragen von Sensoren nicht am Port D2 und D3
+ISR(PCINT2_vec) { //Sensoren
+	byte portWert = 0;
+	byte statusFeuchtLuftPD = 0;	//Status des Sensors abfragen
+	uint8_t sensorBitWert;  //Variable zum Festhalten des aktuellen Bits am Sensor
+
+	portWert = PIND;	//welcher Port wurde angesprochen? (8 BIT- pro Taster ein Bit)
+	statusFeuchtLuftPD = (portWert & (1 << feuchtLuftPD) >> feuchtLuftPD);	//PORT vom Sensor ermitteln
+
+	Serial.println("Interrupt Sensor");
+
+	if (statusFeuchtLuftPD != 0) {
+		if (portInterruptPD3 == 0) {
+			portInterruptPD3 = 1;
+			return;
+		}
+		else {
+			portInterruptPD3 = 0;
+			return;
+		}
+	}
+
+}
+
+// Abfragen des Sensors am Port D3 (DHT11)
+ISR(INT1_vect)
+{
+	portInterruptPD3++;
+	PORTB ^= (1 << ledgePD);
+}
+
+// Timer1 (langsames Blinken)
+ISR(TIMER1_COMPA_vect) {
+	PORTB ^= (1 << ledrtPD);  // LED toggelnd
+	timer1_over++;
+	OCR1A -= 1000;
+	OCR1A = OCR1A % 65535;
+}
+
+// Timer2 (Taster)
+ISR(TIMER2_COMPA_vect) {
+	timer2_over++;
+	//Serial.print("TIMER2: ");
+	//Serial.println(timer2_over);
+}
+
+
+// ############################ SETUP-ROUTINE ########################################
 void setup() {
-	//LCD Dispay initialisieren
-	lcd.begin(16, 2);
-	lcd.clear();
+#ifdef DEBUG
+	// Ausgabe am Monitor vorbereiten (Debug)
+	Serial.begin(9600);
+	Serial.println("\n\nAusgabe am Monitor");
+	Serial.println("------------------");
+	Serial.print("eepromMaximum = ");
+	Serial.println(eepromMaximum);
+	Serial.println("------------------");
+#endif
 
-  //maximalen Rom ermitteln
-  eepromMaximum = E2END + 1;
-  
-  #ifdef DEBUG
-    Serial.begin(9600);
-    Serial.println("\n\nAusgabe am Monitor");
-    Serial.println("------------------");
-    Serial.print("eepromMaximum = ");
-    Serial.println(eepromMaximum);
-    Serial.println("------------------");
-  #endif
+	// Deklarieren der I-O-Ports und Setzen der Pegel
+	DDRB |= (1 << ledrtPD);     // als Ausgang
+	PORTB |= (1 << ledrtPD);	//HIGH setzen
+	DDRB |= (1 << ledgePD);		// als Ausgang
+	PORTB |= (1 << ledgePD);	//HIGH setzen
 
-  DDRD |= (1 << FeuchtLuftPD);  // als Ausgang setzen
-  DDRD |= (1 << dht22Sensor); // als Ausgang setzen
-  DDRB |= (1 << ledPD);     // als Ausgang
-  DDRB &= ~(1 << tasterSensor); // als Eingang setzen - LOW-aktiv 
-  DDRB &= ~(1 << tasterVerlauf);  // als Eingang setzen - LOW-aktiv
+	DDRB &= ~(1 << taster); // als Eingang setzen - LOW-aktiv 
+	PORTB |= (1 << taster); // Pull-Up-Widerstand am Arduino setzen
+	DDRD |= (1 << feuchtLuftPD);  // als Ausgang setzen
+	DDRD |= (1 << dht22Sensor); // als Ausgang setzen
 
-  PORTB |= (1 << tasterSensor); // Pull-Up-Widerstand am Arduino setzen 
-  PORTB |= (1 << tasterVerlauf);  // PULL-UP-Widerstand am Arduino setzen
+	// ()()()()()())()()()()() INTERRUPTS ()()()()()()()()()()()()()()()()()()()()
+	cli();	//deaktivieren von Interrupts
+
+	// TIMER1 fuer langsames Blinken der LED
+	TCCR1A = 0; // TCCR1A register auf 0 setzen
+	TCCR1B = 0; // TCCR1B register auf 0 setzen
+	TCNT1 = 0; // Zaehlerwert zuruecksetzen
+	OCR1A = 65535;	//MAX bei 16-BIT-TIMER: 65535, bei 8-Bit 2 hoch 8 - 1 = 255
+	TCCR1B |= (1 << CS12) | (1 << CS10);
+	TCCR1B |= (1 << WGM12); // CTC Mode
+	TIMSK1 |= (1 << OCIE1A); // timer compare interrupt aktivieren
+
+	// TIMER2 fuer Sensorabfrage
+	TCCR2A = 0;
+	TCCR2B = 0;
+	TCNT2 = 0;
+	OCR2A = 124;
+	TCCR2B |= (1 << CS21) | (1 << CS20);
+	TCCR2B |= (1 << WGM22);
+	TIMSK2 |= (1 << OCIE2A);
+
+	// -------------- EXTERNAL INTERRUPTS ----------------------------
+	// Interrupt auf PORTB-Gruppe (Taster)
+	PCICR |= (1 << PCIE0);		// PIN CHANGE INTERRUPT FUER PB-Gruppe (TASTER)
+	PCMSK0 |= (1 << PCINT0);	//Externer Interruppt fuer Port PD2
+
+	// Interrupt auf PORTD-Gruppe (Sensoren)
+	PCICR |= (1 << PCIE2);
+	PCMSK2 |= (1 << PCINT2);
+
+	// Interrupt auf PORT PD3 (Sensor DHT11)
+	EICRA |= (1 << ISC10); //fallende und steigende Flanke erzeugt einen Interrupt
+	EIMSK |= (1 << INT1);
+
+	sei();	//aktivieren von Interrupts
 }
 
+// ########################## HAUPTPROGRAMM (LOOP) ######################################
 void loop() {
-  int8_t fehler = 0;
+	int16_t fehler = 0;
+	fehler = sensorFeuchtTempAbfrage(feuchtLuftPD);
+#ifdef DEBUG
+	if (fehler == 0) {
+		// Anzeige auf Seriellen Monitor
+		Serial.print("Sensor-Daten:\nZeit: ");
+		Serial.print(wetterSensor[0] / 1000);
+		Serial.print("ms, Temperatur: ");
+		Serial.print(wetterSensor[1]);
+		Serial.print(", Feuchtigkeit: ");
+		Serial.print(wetterSensor[2]);
+		Serial.println("\n\n");
+#endif
 
-  // abrufen der Daten
-  fehler = feuchtLuftAbfrage(FeuchtLuftPD);
-
-  if (fehler == 0) {
-    #ifdef DEBUG
-    // Anzeige auf Seriellen Monitor
-    Serial.print("Sensor-Daten:\nZeit: ");
-    Serial.print(wetterSensor[0] / 1000);
-    Serial.print("ms, Temperatur: ");
-    Serial.print(wetterSensor[1]);
-    Serial.print(", Feuchtigkeit: ");
-    Serial.print(wetterSensor[2]);
-    Serial.println("\n\n");
-    #endif
-
-    // Anzeige auf Display
-    lcdAnzeige();
-  }
-  tasterAbfrage();
+		// Anzeige auf Display
+		lcdAnzeige();
+	}
 }
 
-int feuchtLuftAbfrage(int pin) {
-	// Zeitintervall der Abfrage ueberpruefen
+// ############## ABFRAGEN DES DIGITALEN SENSORS ############################
+int sensorFeuchtTempAbfrage(int pin) {
+	//Zeitintervall der Abfrage ueberpruefen
 	if ((millis() - letzteMesszeitpunkt) < abrufIntervallSekunden * 1000) {
 		if (letzteMesszeitpunkt != 0) {
 			return -99;  // nach Einschalten soll gemessen werden
@@ -92,119 +204,200 @@ int feuchtLuftAbfrage(int pin) {
 	letzteMesszeitpunkt = millis();
 
 	//Variablen
+	int16_t kontrolle[10];
+	int8_t i = 0, j = 0;	//Zaehlervariablen
 	uint8_t wert[5];    //Bytes des Sensorwertes
 	uint8_t bitwert = 7;  //Bit der einzelnen Bytes der Sensorwertes
-
-	// Hilfsvariablen
-	uint16_t timercounter = 100;
-	float t = 0;      //Zeitabfrage
-	int8_t i = 0, j = 0;  //Schleifenvariablen
 	uint8_t sensorBitWert;  //Variable zum Festhalten des aktuellen Bits am Sensor
-	int16_t fehler[6];    // fuer Fehlerkontrolle
+	uint16_t zaehler;
+	uint16_t sum = 0;	//Paritaetssumme
 
-#ifdef DEBUG
-	uint16_t zeitBit[40];
-	uint8_t zwischenzeit[41];
-
-	// entsprechende Werte vorbelegen
-	for (i = 0; i < 40; i++) {
-		zeitBit[i] = 255;
-		zwischenzeit[i] = 0;
-	}
-	zwischenzeit[40] = 0;
-
-	Serial.print("Sensor-Abfrage ");
-	Serial.println(pin);
-#endif
-
-	//Puffer leeren
+	// BUFFER leeren
 	for (i = 0; i < 5; i++) {
+		kontrolle[i] = 0;
 		wert[i] = 0;
-		fehler[i] = 0;
 	}
-	fehler[5] = 0;
+	for (i = 5; i < 10; i++) {
+		kontrolle[i] = 0;
+	}
 
 
-	// Sensor starten - PIN als Ausgang verwenden (laut Datenblatt)
-	DDRD |= (1 << FeuchtLuftPD);	// als Ausgang setzen
-	PORTD &= ~(1 << FeuchtLuftPD);	// auf LOW setzen (invertiere den Port und setze mit Register PORTD zusammen)
-	delay(18);
-	PORTD |= (1 << FeuchtLuftPD);	// auf HIGH setzen
-	delayMicroseconds(40);
-	DDRD &= ~(1 << FeuchtLuftPD);	// PIN als Eingang setzen
-	//PORTD &= ~(1 << FeuchtLuftPD);	// Pull-Up-Widerstand am Arduino nicht setzen, da am Sensor vorhanden (invertiere den Port und setze mit Register PORTD zusammen)
-
-
-	  //Sensorantwort auswerten
-	for (i = 0; i <= 1; i++) {	//Antwort vom Sensor: 1. Bit ist LOW, 2. Bit ist HIGH
-		timercounter = 100;
-		t = micros();
-		delayMicroseconds(5);	//Umschaltung zwischen Aus- und Eingang; LOW-Setzen vom Sensor
-		sensorBitWert = ((PIND & (1 << pin)) >> pin);
-		while (sensorBitWert == i) { //ist Sensor auf LOW-Signal?
-			sensorBitWert = ((PIND & (1 << pin)) >> pin);
-			delayMicroseconds(3);
-			if (timercounter-- == 0) {
-				fehler[0] = -1;
-				break;
-			}
+	//-------------------- Sensor starten - PIN als Ausgang verwenden (laut Datenblatt) ---------------------------
+	timer2_over = 0;
+	TCNT2 = 0; // setzte timer 0 zurueck
+	DDRD |= (1 << pin);	// als Ausgang setzen
+	PORTD &= ~(1 << pin);	// auf LOW setzen (invertiere den Port und setze mit Register PORTD zusammen
+	zaehler = MAXZAEHL;
+	//36*0,5ms = 18ms LOW
+	while (timer2_over < 36) {
+		if (zaehler-- <= 0) {
+			kontrolle[0] = -timer2_over;
+			break;
 		}
-		zwischenzeit[0] = micros() - t;
+		kontrolle[0] = timer2_over;
 	}
+	TCNT2 = 0;
+	PORTD |= (1 << pin);	// auf HIGH setzen
+	timer2_over = 0;
+	zaehler = MAXZAEHL;
+	while (TCNT2 <= 3) {
+		if (zaehler-- <= 0) {
+			kontrolle[1] = -TCNT2;
+			break;
+		}
+	}
+	//1 count = 2 Mikro-Sekunden -> 40 Mikrosekunden
+	while (TCNT2 < 22) {
+		if (zaehler-- <= 0) {
+			kontrolle[1] = -TCNT2;
+			break;
+		}
+		kontrolle[1] = TCNT2;
+	}
+	DDRD &= ~(1 << pin);	// PIN als Eingang setzen
 
-	// Datenbits auswerten
+	cli();
+	//Interrupt einstellen
+	EIMSK |= (1 << INT1);
+	EICRA |= (1 << ISC10);
+	sei();
+
+	// ------------------------- Antwort vom Sensor: 1. Bit ist LOW, 2. Bit ist HIGH ---------------------------------
+	//EICRA |= (1 << ISC11); //fallende Flanke erzeugt einen Interrupt
+	portInterruptPD3 = 0;
+	zaehler = MAXZAEHL;
+	TCNT2 = 0; // setzte timer 0 zurueck
+	timer2_over = 0;	//Warte 4us
+	while (TCNT2 <= 1) {
+		if (zaehler-- <= 0) {
+			kontrolle[2] = -TCNT2;
+			break;
+		}
+	}
+	do {
+		if (zaehler-- <= 0) {
+			kontrolle[2] = -TCNT2;
+			break;
+		}
+		kontrolle[2] = TCNT2;
+	} while (portInterruptPD3 == 0);
+
+	//EICRA |= (1 << ISC11) | (1 << ISC10); //steigende Flanke erzeugt einen Interrupt
+	TCNT2 = 0; // setzte timer 0 zurueck
+	timer2_over = 0;
+	portInterruptPD3 = 0;
+	zaehler = MAXZAEHL;
+	//Warte 4us
+	while (TCNT2 <= 2) {
+		if (zaehler-- <= 0) {
+			kontrolle[3] = -TCNT2;
+			break;
+		}
+	}
+	zaehler = MAXZAEHL;
+	do {
+		if (zaehler-- <= 0) {
+			kontrolle[3] = -TCNT2;
+			break;
+		}
+		kontrolle[3] = TCNT2;
+	} while (portInterruptPD3 == 0);
+
+	//-------------------------- 1.Pause zwischen den Bits: 50us ------------------------------------
+	//Pausenzeit zwischen den Datenbits ist 50 Microsekunden
+	//EICRA &= ~(1 << ISC10);
+	//EICRA |= (1 << ISC11); //fallende Flanke erzeugt einen Interrupt
+	portInterruptPD3 = 0;
+	zaehler = MAXZAEHL;
+	TCNT2 = 0; // setzte timer 0 zurueck
+	timer2_over = 0;
+	//Warte 4us
+	while (TCNT2 <= 2) {
+		if (zaehler-- <= 0) {
+			kontrolle[4] = -TCNT2;
+			break;
+		}
+	}
+	do {
+		if (zaehler-- <= 0) {
+			kontrolle[4] = -TCNT2;
+			break;
+		}
+		kontrolle[4] = TCNT2;
+	} while (portInterruptPD3 == 0);
+
+
+	//----------------------------------- ab jetzt kommen die Daten ---------------------------------------
 	for (i = 0; i < 5; i++) {
 		for (j = 7; j >= 0; j--) {
-			//Pausenzeit zwischen den Datenbits ist 50 Microsekunden
-			timercounter == 10000;
-			t = micros();
-			sensorBitWert = ((PIND & (1 << pin)) >> pin);
-			while (sensorBitWert == 0) { //ist Sensor auf LOW-Signal?
-				sensorBitWert = (PIND & (1 << pin));
-				if (timercounter-- == 0) {
-					fehler[2] = -4;
+			portInterruptPD3 = 0;
+			zaehler = MAXZAEHL;
+			TCNT2 = 0; // setzte timer 0 zurueck
+			timer2_over = 0;
+			//Warte 4us
+			while (TCNT2 <= 2) {
+				if (zaehler-- <= 0) {
+					kontrolle[5] = -TCNT2;
 					break;
 				}
 			}
-			timercounter = 10000;
-			t = micros();
-			sensorBitWert = ((PIND & (1 << pin)) >> pin);
-			while (sensorBitWert != 0) {		//ist Sensor auf HIGH-Signal?
-				sensorBitWert = ((PIND & (1 << pin)) >> pin);
-				if (timercounter-- == 0) {
-					fehler[3] = -4;
+			do {
+				if (zaehler-- <= 0) {
+					kontrolle[5] = -TCNT2;
 					break;
 				}
-			}
+				kontrolle[5] = TCNT2;
+			} while (portInterruptPD3 == 0);
+			portInterruptPD3 = 0;
 
-			// gesendetes BIT HIGH?
-			if ((micros() - t) >= 40) {
+			portInterruptPD3 = 0;
+			zaehler = MAXZAEHL;
+			TCNT2 = 0; // setzte timer 0 zurueck
+			timer2_over = 0;
+			//Warte 4us
+			while (TCNT2 <= 2) {
+				if (zaehler-- <= 0) {
+					kontrolle[6] = -TCNT2;
+					break;
+				}
+			}
+			do {
+				if (zaehler-- <= 0) {
+					kontrolle[6] = -TCNT2;
+					break;
+				}
+				kontrolle[6] = TCNT2;
+			} while (portInterruptPD3 == 0);
+			zaehler = TCNT2;
+			portInterruptPD3 = 0;
+
+			//gesendetes Bit HIGH?
+			if (zaehler >= 20) {	//4us pro hochgezaehlten Bit
 				wert[i] |= (1 << j);
 			}
+			kontrolle[7] = zaehler;
 		}
 	}
 
-	DDRD |= (1 << FeuchtLuftPD);  // als Ausgang setzen
-
+	DDRD |= (1 << feuchtLuftPD);  // als Ausgang setzen
 
 	  //Paritaetspruefung
-	int sum = wert[0] + wert[1] + wert[2] + wert[3];
+	sum = wert[0] + wert[1] + wert[2] + wert[3];
 	if (sum != wert[4]) {
-		fehler[4] = -5;
+		kontrolle[8] = -5;
 	}
-
-	fehler[5] = fehler[0] + fehler[1] + fehler[2] + fehler[4];
 
 #ifdef DEBUG
 	if (sum != wert[4]) {
 		Serial.println("Paritaetspruefung fehlgeschlagen");
 	}
 	// Anzeige zur Fehlereingrenzung)
-	for (i = 0; i < 6; i++) {
+	Serial.println();
+	for (i = 0; i < 10; i++) {
 		Serial.print("Fehler");
 		Serial.print(i);
 		Serial.print(" ");
-		Serial.print(fehler[i]);
+		Serial.print(kontrolle[i]);
 		Serial.println(", ");
 	}
 	Serial.print(", SensorBitWert: ");
@@ -221,13 +414,20 @@ int feuchtLuftAbfrage(int pin) {
 	Serial.println("\n\n");
 #endif
 
+	for (i = 1; i < 10; i++) {
+		if (kontrolle[i] > 0) {
+			kontrolle[i] = 0;
+		}
+		kontrolle[9] += kontrolle[i];
+	}
 
-	if (fehler[5] != 0) {
-		return fehler[5];
+	if (kontrolle[9] != 0) {
+		return kontrolle[9];
 	}
 
 	wetterSensor[0] = micros();
-	wetterSensor[1] = wert[2];
+	wetterSensor[1] = wert[3];
+	wetterSensor[1] = wetterSensor[1]/10+ wert[2];
 	wetterSensor[2] = wert[0];
 
 	return 0;
@@ -246,15 +446,15 @@ void lcdAnzeige() {
 	lcd.setCursor(10, 1);
 	lcd.print(wetterSensor[1]);
 }
-void tasterAbfrage() {
-  uint8_t i = 0;
-  for (i = 0; i <= 1; i++) {
-    tasterSens = PINB & (1 << tasterSensor);
-	tasterVerl = PINB & (1 << tasterVerlauf);
-	delay(1);
-  }
-  if ((tasterSens == 0) | (tasterVerl == 0)) {  //taster wurde gedrueckt
-    PORTB ^= (1 << ledPD);  // LED toggelnd
-  }
-  delay(1);
+
+void taktermittlung() {
+	//TCCR2B |= (1 << CS21) | (1 << CS20);	//TIMER0 PRESCALER auf 64 einstellen
+	//TCNT2 = 0; // setzte timer 0 zurueck
+	while (1) {
+		TCNT2 = 0; // setzte timer 0 zurueck
+		timer2_over = 0;
+		while (TCNT2 <= 9) {}
+		PORTB ^= (1 << ledgePD);
+		//TCNT2 = 0;
+	}
 }
