@@ -7,6 +7,8 @@
 
 //Display auf Port initalisieren
 LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
+const int lcdBreite = 20;
+const int lcdHoehe = 2;
 
 //Konstanten
 #define MAXZAEHL 65000
@@ -114,6 +116,7 @@ ISR(TIMER2_COMPA_vect) {
 
 // ############################ SETUP-ROUTINE ########################################
 void setup() {
+  lcd.begin(lcdBreite,lcdHoehe);
 #ifdef DEBUG
 	// Ausgabe am Monitor vorbereiten (Debug)
 	Serial.begin(9600);
