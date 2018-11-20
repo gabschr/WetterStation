@@ -16,13 +16,13 @@ const int lcdHoehe = 2;
 // GLOBALE VARIABLEN
 double wetterSensor[3]; //Array fuer Temp und Feuchtigkeit (0. Wert: Zeitstempel (ab Start vom Arduino in us), 1.Wert: Feucht, 2.Wert: Temp
 unsigned int eepromMaximum = 0;
-unsigned long abrufIntervallSekunden = 5;
+unsigned long abrufIntervallSekunden = 20;
 unsigned long letzteMesszeitpunkt = 0;
 uint8_t timerTaster = 0;
-uint8_t timerLED = 2;
+uint8_t blinkzeitLed = 0;	//zwischen 0 und 12, 0-> gar nicht blinken; 12 (ca.7s leuchten)- langsames blinken; 1-schnelles blinken
 
 uint8_t timer0_over = 0;
-volatile bool timer1_over = 0;
+volatile uint8_t timer1_over = 0;
 volatile uint8_t timer2_over = 0;
 volatile uint8_t portInterruptPD3 = 0;
 
@@ -49,14 +49,15 @@ ISR(PCINT0_vect) {
 	portWert = PINB;	//welcher Port wurde angesprochen?
 	// wurde Taster gedrueckt?
 	aktuellerTasterWert = (portWert & (1 << taster) >> taster);
-	if (aktuellerTasterWert == 1) {	//wurde taster angesprochen?
+	if (aktuellerTasterWert == 0) {	//wurde taster angesprochen?
 		tasterWert = (PINB & (1 << taster)) >> taster;
 #ifdef DEBUG
-		Serial.print("Interrupt Taster, Tasterwert: ");
-		Serial.println(tasterWert);
+		//Serial.print("Interrupt Taster, Tasterwert, tasterVorher: ");
+		//Serial.println(tasterWert);
+		//Serial.println(tasterVorher);
 #endif
 		//wurde gedrueckt? (nicht los gelassen?)
-		if (tasterWert == 1){
+		if (tasterWert == 0){
 			// entprellen
 			if (tasterVorher == 0) {	// Taster wurde zum ersten Mal gedrueckt
 				tasterVorher = 1;
@@ -69,26 +70,7 @@ ISR(PCINT0_vect) {
 
 // Routine zum Abfragen von Sensoren nicht am Port D2 und D3
 //ISR(PCINT2_vec) { //Sensoren
-//	byte portWert = 0;
-//	byte statusFeuchtLuftPD = 0;	//Status des Sensors abfragen
-//	uint8_t sensorBitWert;  //Variable zum Festhalten des aktuellen Bits am Sensor
-//
-//	portWert = PIND;	//welcher Port wurde angesprochen? (8 BIT- pro Taster ein Bit)
-//	statusFeuchtLuftPD = (portWert & (1 << feuchtLuftPD) >> feuchtLuftPD);	//PORT vom Sensor ermitteln
-//
-//	Serial.println("Interrupt Sensor");
-//
-//	if (statusFeuchtLuftPD != 0) {
-//		if (portInterruptPD3 == 0) {
-//			portInterruptPD3 = 1;
-//			return;
-//		}
-//		else {
-//			portInterruptPD3 = 0;
-//			return;
-//		}
-//	}
-//
+
 //}
 
 // Abfragen des Sensors am Port D3 (DHT11)
@@ -97,8 +79,10 @@ ISR(INT1_vect)
 	portInterruptPD3++;
 }
 
-// Timer1 (langsames Blinken)
+// Timer1 Taster und rote LED
 ISR(TIMER1_COMPA_vect) {
+	uint8_t timerteiler = 0;
+
 	if (tasterVorher > 0) {
 		// 30 ms nach Tastendruck warten, um Prellen auszuschließen
 		if (timerTaster > 0) {
@@ -106,9 +90,10 @@ ISR(TIMER1_COMPA_vect) {
 			tasterVorher = 0;
 		}
 	}
-	if (timerLED > 0) {
-		if ((timer1_over/20) % timerLED) {
+	if (blinkzeitLed > 0) {
+		if (timer1_over/20 == blinkzeitLed) {
 			PORTB ^= (1 << ledrtPD);  // LED toggelnd
+			timer1_over = 0;
 		}
 	}
 	timer1_over++;
@@ -360,6 +345,7 @@ int sensorFeuchtTempAbfrage(int pin) {
 		return kontrolle[9];
 	}
 
+	//Werte schreiben in Array
 	wetterSensor[0] = micros();
 	wetterSensor[1] = wert[3];
 	wetterSensor[1] = wetterSensor[1]/10+ wert[2];
@@ -367,8 +353,6 @@ int sensorFeuchtTempAbfrage(int pin) {
 
 	return 0;
 }
-
-
 
 void lcdAnzeige() {
 	lcd.clear();
@@ -382,16 +366,4 @@ void lcdAnzeige() {
 	lcd.print("Temp.: ");
 	lcd.setCursor(10, 1);
 	lcd.print(wetterSensor[1]);
-}
-
-void taktermittlung() {
-	//TCCR2B |= (1 << CS21) | (1 << CS20);	//TIMER0 PRESCALER auf 64 einstellen
-	//TCNT2 = 0; // setzte timer 0 zurueck
-	while (1) {
-		TCNT2 = 0; // setzte timer 0 zurueck
-		timer2_over = 0;
-		while (TCNT2 <= 9) {}
-		PORTB ^= (1 << ledgePD);
-		//TCNT2 = 0;
-	}
 }
