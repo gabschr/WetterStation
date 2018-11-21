@@ -12,16 +12,14 @@ const int lcdHoehe = 2;
 
 //Konstanten
 #define MAXZAEHL 65000
+#define abrufIntervallSekunden 30
 
 // GLOBALE VARIABLEN
-double wetterSensor[4]; //Array fuer Temp und Feuchtigkeit (0: Nr. des Sensors, 1: Messzeitpunkt der Messung (ab Start vom Arduino in us), 2.Wert: Feucht, 3.Wert: Temp
+double wetterSensor[4]; //Array fuer Temp und Feuchtigkeit (0: Nr. des Sensors, 1: Messzeitpunkt der Messung (ab Start vom Arduino in s), 2.Wert: Feucht, 3.Wert: Temp
 unsigned int eepromMaximum = 0;
-unsigned int abrufIntervallSekunden = 30;
-unsigned long letzteMesszeitpunkt = 0;
 uint8_t timerTaster = 0;
 uint8_t blinkzeitLed = 0;	//zwischen 0 und 12, 0-> gar nicht blinken; 12 (ca.7s leuchten)- langsames blinken; 1-schnelles blinken
 
-uint8_t timer0_over = 0;
 volatile uint8_t timer1_over = 0;
 volatile uint8_t timer2_over = 0;
 volatile uint8_t portInterruptPD3 = 0;
@@ -110,7 +108,7 @@ ISR(TIMER2_COMPA_vect) {
 
 // ############################ SETUP-ROUTINE ########################################
 void setup() {
-  lcd.begin(lcdBreite,lcdHoehe);
+	lcd.begin(lcdBreite, lcdHoehe);
 #ifdef DEBUG
 	// Ausgabe am Monitor vorbereiten (Debug)
 	Serial.begin(9600);
@@ -140,6 +138,8 @@ void setup() {
 		wetterSensor[i] = 0;
 	}
 
+	// Array mit Sensor-Nummern befüllen
+	wetterSensor[0] = 11;
 
 	// ()()()()()())()()()()() INTERRUPTS ()()()()()()()()()()()()()()()()()()()()
 	cli();	//deaktivieren von Interrupts
@@ -186,12 +186,11 @@ void loop() {
 	if (fehler == 0) {
 		// Anzeige auf Seriellen Monitor
 		Serial.print("Sensor-Daten:\nZeit: ");
-		Serial.print(wetterSensor[1] / 1000);
-		Serial.print("ms, Temperatur: ");
+		Serial.print(wetterSensor[1]);
+		Serial.print("s, Temperatur: ");
 		Serial.print(wetterSensor[2]);
 		Serial.print(", Feuchtigkeit: ");
 		Serial.print(wetterSensor[3]);
-		Serial.println("\n\n");
 #endif
 
 		// Anzeige auf Display
@@ -201,15 +200,13 @@ void loop() {
 
 // ############## ABFRAGEN DES DIGITALEN SENSORS ############################
 int sensorFeuchtTempAbfrage(uint8_t pin, uint8_t sensorNr) {
-	wetterSensor[0] = 11;
 	//Zeitintervall der Abfrage ueberpruefen
-	if ((millis() - letzteMesszeitpunkt) < abrufIntervallSekunden * 1000) {
+	if ((millis()/1000 - wetterSensor[1]) < abrufIntervallSekunden) {
 		if (wetterSensor[1] != 0) {
-
 			return -99;  // nach Einschalten soll gemessen werden
 		}
 	}
-	letzteMesszeitpunkt = millis();
+	wetterSensor[1] = millis() / 1000;
 
 	//Variablen
 	int16_t kontrolle[10];
@@ -354,7 +351,7 @@ int sensorFeuchtTempAbfrage(uint8_t pin, uint8_t sensorNr) {
 	}
 
 	//Werte schreiben in Array
-	wetterSensor[1] = (double)micros();
+	wetterSensor[1] = millis() / 1000;
 	wetterSensor[2] = wert[3];
 	wetterSensor[2] = wetterSensor[2]/10+ wert[2];
 	wetterSensor[3] = wert[0];
