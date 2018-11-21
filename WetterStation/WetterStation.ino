@@ -14,9 +14,9 @@ const int lcdHoehe = 2;
 #define MAXZAEHL 65000
 
 // GLOBALE VARIABLEN
-double wetterSensor[3]; //Array fuer Temp und Feuchtigkeit (0. Wert: Zeitstempel (ab Start vom Arduino in us), 1.Wert: Feucht, 2.Wert: Temp
+double wetterSensor[4]; //Array fuer Temp und Feuchtigkeit (0: Nr. des Sensors, 1: Messzeitpunkt der Messung (ab Start vom Arduino in us), 2.Wert: Feucht, 3.Wert: Temp
 unsigned int eepromMaximum = 0;
-unsigned long abrufIntervallSekunden = 20;
+unsigned int abrufIntervallSekunden = 30;
 unsigned long letzteMesszeitpunkt = 0;
 uint8_t timerTaster = 0;
 uint8_t blinkzeitLed = 0;	//zwischen 0 und 12, 0-> gar nicht blinken; 12 (ca.7s leuchten)- langsames blinken; 1-schnelles blinken
@@ -135,6 +135,12 @@ void setup() {
 	DDRD |= (1 << feuchtLuftPD);  // als Ausgang setzen
 	DDRD |= (1 << dht22Sensor); // als Ausgang setzen
 
+	// leere Array wetterSensor
+	for (int i = 0; i < 5; i++) {
+		wetterSensor[i] = 0;
+	}
+
+
 	// ()()()()()())()()()()() INTERRUPTS ()()()()()()()()()()()()()()()()()()()()
 	cli();	//deaktivieren von Interrupts
 
@@ -175,16 +181,16 @@ void setup() {
 // ########################## HAUPTPROGRAMM (LOOP) ######################################
 void loop() {
 	int16_t fehler = 0;
-	fehler = sensorFeuchtTempAbfrage(feuchtLuftPD);
+	fehler = sensorFeuchtTempAbfrage(feuchtLuftPD, 11);
 #ifdef DEBUG
 	if (fehler == 0) {
 		// Anzeige auf Seriellen Monitor
 		Serial.print("Sensor-Daten:\nZeit: ");
-		Serial.print(wetterSensor[0] / 1000);
+		Serial.print(wetterSensor[1] / 1000);
 		Serial.print("ms, Temperatur: ");
-		Serial.print(wetterSensor[1]);
-		Serial.print(", Feuchtigkeit: ");
 		Serial.print(wetterSensor[2]);
+		Serial.print(", Feuchtigkeit: ");
+		Serial.print(wetterSensor[3]);
 		Serial.println("\n\n");
 #endif
 
@@ -194,10 +200,12 @@ void loop() {
 }
 
 // ############## ABFRAGEN DES DIGITALEN SENSORS ############################
-int sensorFeuchtTempAbfrage(int pin) {
+int sensorFeuchtTempAbfrage(uint8_t pin, uint8_t sensorNr) {
+	wetterSensor[0] = 11;
 	//Zeitintervall der Abfrage ueberpruefen
 	if ((millis() - letzteMesszeitpunkt) < abrufIntervallSekunden * 1000) {
-		if (letzteMesszeitpunkt != 0) {
+		if (wetterSensor[1] != 0) {
+
 			return -99;  // nach Einschalten soll gemessen werden
 		}
 	}
@@ -346,10 +354,19 @@ int sensorFeuchtTempAbfrage(int pin) {
 	}
 
 	//Werte schreiben in Array
-	wetterSensor[0] = micros();
-	wetterSensor[1] = wert[3];
-	wetterSensor[1] = wetterSensor[1]/10+ wert[2];
-	wetterSensor[2] = wert[0];
+	wetterSensor[1] = (double)micros();
+	wetterSensor[2] = wert[3];
+	wetterSensor[2] = wetterSensor[2]/10+ wert[2];
+	wetterSensor[3] = wert[0];
+
+	Serial.println("WetterSensor: ");
+	for (i = 0; i < 5; i++) {
+		Serial.print(i);
+		Serial.print(":");
+		Serial.print(wetterSensor[i]);
+		Serial.println();
+	}
+	Serial.println();
 
 	return 0;
 }
@@ -361,9 +378,9 @@ void lcdAnzeige() {
 	lcd.setCursor(0, 0);
 	lcd.print("Luftf.: ");
 	lcd.setCursor(10, 0);
-	lcd.print(wetterSensor[2]);
+	lcd.print(wetterSensor[3]);
 	lcd.setCursor(0, 1);
 	lcd.print("Temp.: ");
 	lcd.setCursor(10, 1);
-	lcd.print(wetterSensor[1]);
+	lcd.print(wetterSensor[2]);
 }
