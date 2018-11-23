@@ -18,7 +18,8 @@ const int lcdHoehe = 2;
 // GLOBALE VARIABLEN
 //Array fuer Temp und Feuchtigkeit, v.l.n.r.: Historie- 3.Dimension,  Sensor-Nr.(PORT)- 2. Dimension, Sensor-Werte- 1. Dimension
 //Werte 1.Dimesion: 0: Nr. des Sensors, 1: Messzeitpunkt der Messung (ab Start vom Arduino in s), 2.Wert: Feucht, 3.Wert: Temp
-double wetterSensor[6][3][4]; 
+const int historischeWerteAnzahl = 10;
+double wetterSensor[historischeWerteAnzahl][3][4]; 
 
 uint8_t letzteAbrufzeit[3][2];
 uint8_t letzteHistorieZeit;
@@ -225,12 +226,14 @@ void loop() {
 
 	// Events bei neuen Sensorwerten
 	if (kontrolle == 0) {
-    lcdAnzeige();
+    aktuelleWerteAnzeigen();
     verlaufArrayVorschieben();
 	}
   // Events bei Tastendruck
   if (tasterGedruckt > 0) {
-    lcdAnzeige();
+    tasterGedruckt = 0;
+    anzeigeSensor = (anzeigeSensor+1)% 3;
+    aktuelleWerteAnzeigen();
   }
 }
 
@@ -431,7 +434,7 @@ void verlaufArrayVorschieben(){
   }
   letzteHistorieZeit = (millis() / 1000) % 255;
   
-  for(int historieEbene=0; historieEbene<6; historieEbene++){
+  for(int historieEbene=0; historieEbene<historischeWerteAnzahl; historieEbene++){
     for(int einzelnerSensor=0; einzelnerSensor<3; einzelnerSensor++){
       for(int werteSensor=0; werteSensor<4;werteSensor++){
         wetterSensor[historieEbene+1][einzelnerSensor][werteSensor] = wetterSensor[historieEbene][einzelnerSensor][werteSensor];
@@ -445,13 +448,8 @@ void verlaufArrayVorschieben(){
   #endif
 }
 
-void lcdAnzeige() {
+void aktuelleWerteAnzeigen() {
 	lcd.clear();
-
-	if (tasterGedruckt == 1) {
-		tasterGedruckt = 0;
-		anzeigeSensor = (anzeigeSensor+1)% 3;
-	}
 
 	//Werte auf LCD drucken
 	lcd.setCursor(0, 0);
