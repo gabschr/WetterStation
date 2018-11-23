@@ -13,6 +13,7 @@ const int lcdHoehe = 2;
 //Konstanten
 #define MAXZAEHL 65000
 #define abrufIntervallSekunden 30
+# define abstandHistorie 60
 
 // GLOBALE VARIABLEN
 //Array fuer Temp und Feuchtigkeit, v.l.n.r.: Historie- 3.Dimension,  Sensor-Nr.(PORT)- 2. Dimension, Sensor-Werte- 1. Dimension
@@ -20,6 +21,7 @@ const int lcdHoehe = 2;
 double wetterSensor[6][3][4]; 
 
 uint8_t letzteAbrufzeit[3][2];
+uint8_t letzteHistorieZeit;
 
 unsigned int eepromMaximum = 0;
 
@@ -201,30 +203,35 @@ void loop() {
 	kontrolle = sensorFeuchtTempAbfrage(feuchtLuftPD);
 	// -> noch Interrupt fuer Port D einstellen!!
 	sensorFeuchtTempAbfrage(dht22Sensor);
-#ifdef DEBUG
-	if (kontrolle == 0) {
-		for (uint8_t i = 0; i < 3; i++) {
-			// Anzeige auf Seriellen Monitor
-			Serial.print("\nSensor-Nummer: ");
-			Serial.print(wetterSensor[0][i][0]);
-			Serial.print(" Sensor-Daten:\nZeit: ");
-			Serial.print(wetterSensor[0][i][1]);
-			Serial.print("s, Temperatur: ");
-			Serial.print(wetterSensor[0][i][2]);
-			Serial.print(", Feuchtigkeit: ");
-			Serial.println(wetterSensor[0][i][3]);
-			Serial.print("letzte Abrufzeit: ");
-			Serial.println(letzteAbrufzeit[i][1]);
-		}
-	}
-	Serial.print("AnzeigeSensor: ");
-	Serial.println(anzeigeSensor);
-#endif
+  #ifdef DEBUG
+  	if (kontrolle == 0) {
+  		for (uint8_t i = 0; i < 3; i++) {
+  			// Anzeige auf Seriellen Monitor
+  			Serial.print("\nSensor-Nummer: ");
+  			Serial.print(wetterSensor[0][i][0]);
+  			Serial.print(" Sensor-Daten:\nZeit: ");
+  			Serial.print(wetterSensor[0][i][1]);
+  			Serial.print("s, Temperatur: ");
+  			Serial.print(wetterSensor[0][i][2]);
+  			Serial.print(", Feuchtigkeit: ");
+  			Serial.println(wetterSensor[0][i][3]);
+  			Serial.print("letzte Abrufzeit: ");
+  			Serial.println(letzteAbrufzeit[i][1]);
+  		}
+  	}
+  	Serial.print("AnzeigeSensor: ");
+  	Serial.println(anzeigeSensor);
+  #endif
 
-	// Anzeige auf Display
-	if (kontrolle == 0 | tasterGedruckt > 0) {
-		lcdAnzeige();
+	// Events bei neuen Sensorwerten
+	if (kontrolle == 0) {
+    lcdAnzeige();
+    verlaufArrayVorschieben();
 	}
+  // Events bei Tastendruck
+  if (tasterGedruckt > 0) {
+    lcdAnzeige();
+  }
 }
 
 // ############## ABFRAGEN DES DIGITALEN SENSORS ############################
@@ -395,7 +402,7 @@ int sensorFeuchtTempAbfrage(uint8_t pin) {
 	}
 
 	// Pruefung auf Plausibilitaet ->-> muss noch gemaccht werden
-
+  
 	//Werte schreiben in Array
 	wetterSensor[0][sensorImArray][1] = millis() / 1000;
 	wetterSensor[0][sensorImArray][2] = wert[3];
@@ -415,6 +422,27 @@ int sensorFeuchtTempAbfrage(uint8_t pin) {
 	Serial.println();
 
 	return 0;
+}
+
+void verlaufArrayVorschieben(){
+  //Zeit überprüfen
+  if (((millis()/1000)%255 - letzteHistorieZeit) < abstandHistorie) {
+    return;
+  }
+  letzteHistorieZeit = (millis() / 1000) % 255;
+  
+  for(int historieEbene=0; historieEbene<6; historieEbene++){
+    for(int einzelnerSensor=0; einzelnerSensor<3; einzelnerSensor++){
+      for(int werteSensor=0; werteSensor<4;werteSensor++){
+        wetterSensor[historieEbene+1][einzelnerSensor][werteSensor] = wetterSensor[historieEbene][einzelnerSensor][werteSensor];
+      }
+    }
+  }
+ 
+  #ifdef DEBUG
+    // Anzeige auf Seriellen Monitor
+    Serial.print("\n historischer Verlauf weitergeschoben \n");
+  #endif
 }
 
 void lcdAnzeige() {
