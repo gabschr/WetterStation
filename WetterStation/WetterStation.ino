@@ -100,6 +100,7 @@ ISR(INT1_vect)
  // Routine zum Abfragen von Sensoren nicht am Port D2 und D3
 ISR(PCINT2_vect) { //Sensoren an PORT D, die nicht an D2 und D3 haengen
 	interruptPinD++;
+	portInterrupt = 4;
 	if ((PIND & (1 >> PCINT20) << PCINT20) > 0) {
 		portInterrupt = 4;
 	}
