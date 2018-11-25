@@ -12,21 +12,19 @@ const int lcdHoehe = 2;
 
 //Konstanten
 #define MAXZAEHL 65000
-#define abrufIntervallSekunden 5
+#define abrufIntervallSekunden 30
 #define abstandHistorie 60
 
 // GLOBALE VARIABLEN
 const uint8_t historischeWerteAnzahl = 10;
 const uint8_t sensorAnzahl = 3;
 //Array fuer Temp und Feuchtigkeit, v.l.n.r.: Historie- 3.Dimension,  Sensor-Nr.(PORT)- 2. Dimension, Sensor-Werte- 1. Dimension
-//Werte 1.Dimesion: 0: Nr. des Sensors, 1: Messzeitpunkt der Messung (ab Start vom Arduino in s), 2.Wert: Feucht, 3.Wert: Temp
+//Werte 1.Dimesion: 0: Nr. des Sensors, 1: Messzeitpunkt der Messung (ab Start vom Arduino in s), 2.Wert: Temp, 3.Wert: Luftfeuchte
 double wetterSensor[historischeWerteAnzahl][sensorAnzahl][4];
 
-uint32_t letzteAbrufzeit[sensorAnzahl][2]; //0. Stelle: letzter Abfragewert Sensor, 1. Stelle: letzte Verschiebung historischer Daten
+uint32_t letzteAbrufzeit[sensorAnzahl][3]; //0. Stelle: Senssor-Typ, 1.Stelle: letzter Abfragewert Sensor, 1. Stelle: letzte Verschiebung historischer Daten
 
 unsigned int eepromMaximum = 0;
-
-uint8_t interruptPinD = 0;
 
 volatile uint8_t timer1_over = 0;
 volatile uint8_t timer2_over = 0;
@@ -35,14 +33,13 @@ volatile uint8_t portInterrupt = 0;
 uint8_t timerTaster = 0;
 uint8_t blinkzeitLed = 1;	//zwischen 0 und 12, 0-> gar nicht blinken; 12 (ca.7s leuchten)- langsames blinken; 1-schnelles blinken
 
-uint8_t tasterVorher = 0;
-uint8_t tasterGedruckt = 0;	//0: nicht gedruckt, 1: gedrueckt, 2: lang gedruckt7
+int8_t tasterBetaetigung = 0;	//0: nicht gedruckt, -1: muss entprellt werden, -2: ist entprellt, 1: gedrueckt, 2: lang gedruckt
 uint8_t anzeigeSensor = 0;	//welcher Sensor soll angezeigt werden? (0 -> 0.Wert im Array)
 
 
 //eigene Symbole
 char thermometerChar = 0;
-char feuchtigkeitChar = 0;
+char feuchtigkeitChar = 1;
 byte thermometerByte[8] = {
   B01110,
   B01010,
@@ -79,15 +76,23 @@ byte feuchtigkeitByte[8] = {
 ISR(PCINT0_vect) {
 	uint8_t aktuellerTasterWert;
 
-	// wurde Taster gedrueckt?
+	// wurde Taster gedrueckt? // LOW-aktiv
 	aktuellerTasterWert = (PINB & (1 << taster) >> taster);
-	if (aktuellerTasterWert == 0) {	//wurde taster angesprochen?
-		// entprellen
-		if (tasterVorher == 0) {	// Taster wurde zum ersten Mal gedrueckt
-			tasterVorher = 1;
-			timerTaster = 0;
+	if ((aktuellerTasterWert == 0) && (tasterBetaetigung == 0)) {	//wurde taster zum ersten Mal betaetigt?
+		tasterBetaetigung = -1;
+		timerTaster = 0;
+		return;
+	}
+	if ((aktuellerTasterWert == 1) && (tasterBetaetigung == -2)) {	//Taster wurde losgelassen und war vorher stabil
+		PORTB ^= (1 << ledgePD);  // LED toggelnd
+		if (timerTaster > 40) {	// 400 * 50ms = 2s
+			tasterBetaetigung = 2;
+#ifdef DEBUG
+			Serial.println("\nTaster laenger als 2s gedrueckt");
+#endif // DEBUG
 			return;
 		}
+		tasterBetaetigung = 1;
 	}
 }
 
@@ -99,9 +104,7 @@ ISR(INT1_vect)
 
  // Routine zum Abfragen von Sensoren nicht am Port D2 und D3
 ISR(PCINT2_vect) { //Sensoren an PORT D, die nicht an D2 und D3 haengen
-	interruptPinD++;
-	portInterrupt = 4;
-	if ((PIND & (1 >> PCINT20) << PCINT20) > 0) {
+	if ((PIND & (1 << PCINT20) >> PCINT20) == 1) {
 		portInterrupt = 4;
 	}
 }
@@ -109,16 +112,12 @@ ISR(PCINT2_vect) { //Sensoren an PORT D, die nicht an D2 und D3 haengen
 
 // Timer1 Taster und rote LED (30ms)
 ISR(TIMER1_COMPA_vect) {
-	if (tasterVorher > 0) {
-		// 50 ms nach Tastendruck warten, um Prellen auszuschließen
-		if (timerTaster > 0) {
-			PORTB ^= (1 << ledgePD);  // LED toggelnd
-			tasterGedruckt = 1;
-			tasterVorher = 0;
-		}
+	// 50 ms nach Tastendruck warten, um Prellen auszuschließen
+	if ((tasterBetaetigung < 0) && (timerTaster > 0)) {
+		tasterBetaetigung = -2;
 	}
 	if (blinkzeitLed > 0) {
-		if (timer1_over / 20 == blinkzeitLed) {
+		if (timer1_over / 2 == blinkzeitLed) {
 			PORTB ^= (1 << ledrtPD);  // LED toggelnd
 			timer1_over = 0;
 		}
@@ -176,10 +175,13 @@ void setup() {
 
 	// leere Array letzte Zugriffszeit und setze Sensor-Nr.
 	for (uint8_t i = 0; i < 3; i++) {
-		for(uint8_t j =0; j<2;j++){
+		for(uint8_t j =0; j < 3; j++){
 			letzteAbrufzeit[i][j] = 0;
 		}
 	}
+	letzteAbrufzeit[0][0] = 11;	//SENSOR-TYP DHT11
+	letzteAbrufzeit[1][0] = 22; //SENSOR-TYP DHT22
+	letzteAbrufzeit[2][0] = 1;	//SENSOR-TYP ANALOG AMT1001
 
 	// ()()()()()())()()()()() INTERRUPTS ()()()()()()()()()()()()()()()()()()()()
 	cli();	//deaktivieren von Interrupts
@@ -241,12 +243,11 @@ void loop() {
 			Serial.print(", Feuchtigkeit: ");
 			Serial.println(wetterSensor[0][i][3]);
 			Serial.print("letzte Abrufzeit: ");
-			Serial.println(letzteAbrufzeit[i][0]);
+			Serial.println(letzteAbrufzeit[i][1]);
 			Serial.print("Kontrolle: ");
 			Serial.println(kontrolle);
 		}
 	}
-	interruptPinD = 0;
 #endif
 	kontrolle = sensorFeuchtTempAbfrage(dht22Sensor);
 
@@ -254,8 +255,6 @@ void loop() {
 	if (kontrolle != -99) {
 		Serial.print("Kontrolle: ");
 		Serial.println(kontrolle);
-		Serial.print("Interrupt: ");
-		Serial.println(interruptPinD);
 	}
 #endif // DEBUG
 
@@ -266,13 +265,14 @@ void loop() {
 		aktuelleWerteAnzeigen();
 	}
 	// Events bei Tastendruck
-	if (tasterGedruckt > 0) {
-		tasterGedruckt = 0;
+	if (tasterBetaetigung > 0) {
+		tasterBetaetigung = 0;
 		anzeigeSensor = (anzeigeSensor + 1) % 3;
 		aktuelleWerteAnzeigen();
     #ifdef DEBUG
     		Serial.print("AnzeigeSensor: ");
     		Serial.println(anzeigeSensor);
+			Serial.println(tasterBetaetigung);
     #endif
 	}
 }
@@ -281,11 +281,10 @@ void loop() {
 int sensorFeuchtTempAbfrage(uint8_t pin) {
 	//Variablen
 	int8_t sensorImArray = -1;
-	int8_t kontrolle = 0;
+	/*int8_t kontrolle = 0;*/
 	int8_t i = 0, j = 0;	//Zaehlervariablen
 	uint8_t wert[5];    //Bytes des Sensorwertes
 	uint8_t bitwert = 7;  //Bit der einzelnen Bytes des Sensorwertes
-	uint16_t zaehler;
 	uint16_t sum = 0;	//Zeit fuer Datenbit, Paritaetssumme
 
 	for (i = 0; i < sensorAnzahl; i++) {
@@ -299,12 +298,12 @@ int sensorFeuchtTempAbfrage(uint8_t pin) {
 	}
 
 	//Zeitintervall der Abfrage ueberpruefen
-	if (((millis() / 1000) - letzteAbrufzeit[sensorImArray][0]) < abrufIntervallSekunden) {
-		if (letzteAbrufzeit[sensorImArray][0] != 0) {// nach Einschalten soll gemessen werden
+	if (((millis() / 1000) - letzteAbrufzeit[sensorImArray][1]) < abrufIntervallSekunden) {
+		if (letzteAbrufzeit[sensorImArray][1] != 0) {// nach Einschalten soll gemessen werden
 			return -99;
 		}
 	}
-	letzteAbrufzeit[sensorImArray][0] = (millis() / 1000);
+	letzteAbrufzeit[sensorImArray][1] = (millis() / 1000);
 
 	// BUFFER leeren
 	for (i = 0; i < 5; i++) {
@@ -316,21 +315,26 @@ int sensorFeuchtTempAbfrage(uint8_t pin) {
 	TCNT2 = 0; // setzte timer 0 zurueck
 	DDRD |= (1 << pin);	// als Ausgang setzen
 	PORTD &= ~(1 << pin);	// auf LOW setzen
-	zaehler = MAXZAEHL;
+	sum = MAXZAEHL;
 
 	//36*0,5ms (Zaehldauer Timer2) = 18ms LOW
-	while (timer2_over < 36) {
-		if (zaehler-- <= 0) {
-			return -11;
+	switch (letzteAbrufzeit[sensorImArray][0]) {
+		case 11: j = 36; break;	//DHT11
+		case 22: j = 2; break;	//DHT22
+		default: break;
+	}
+	while (timer2_over < j) {
+		if (sum-- <= 0) {
+			return -10;
 		}
 	}
 	TCNT2 = 0;
 	PORTD |= (1 << pin);	// auf HIGH setzen
 	timer2_over = 0;
-	zaehler = MAXZAEHL;
+	sum = MAXZAEHL;
 	//1 count = 2 Mikro-Sekunden -> 40 Mikrosekunden
 	while (TCNT2 < 22) {
-		if (zaehler-- <= 0) {
+		if (sum-- <= 0) {
 			return -11;
 		}
 	}
@@ -341,18 +345,16 @@ int sensorFeuchtTempAbfrage(uint8_t pin) {
 		TCNT2 = 0; // setzte timer 0 zurueck
 		timer2_over = 0;
 		portInterrupt = 0;
-		zaehler = MAXZAEHL;
-		//Warte 4us
-		while (TCNT2 <= 1) {
-			if (zaehler-- <= 0) {
-				kontrolle = -29-i;
-				return kontrolle;
+		sum = MAXZAEHL;
+		//Warte 2us
+		while (TCNT2 <= 2) {
+			if (sum-- <= 0) {
+				return -19-i;
 			}
 		}
 		do {
-			if (zaehler-- <= 0) {
-				kontrolle = -20-i;
-				return kontrolle;
+			if (sum-- <= 0) {
+				return -20-i;
 			}
 		} while (portInterrupt == 0);
 	}
@@ -366,13 +368,18 @@ int sensorFeuchtTempAbfrage(uint8_t pin) {
 			//PAUSE, danach DATEN:
 			for (int k = 5; k < 7; k++) {
 				portInterrupt = 0;
-				zaehler = MAXZAEHL;
+				sum = MAXZAEHL;
 				TCNT2 = 0; // setzte timer 0 zurueck
 				timer2_over = 0;
+				//Warte 4us
+				while (TCNT2 <= 2) {
+					if (sum-- <= 0) {
+						return -29-i;
+					}
+				}
 				do {
-					if (zaehler-- <= 0) {
-						kontrolle = -30-k;
-						return kontrolle;
+					if (sum-- <= 0) {
+						return -30-k;
 					}
 				} while (portInterrupt == 0);
 				portInterrupt = 0;
@@ -381,7 +388,7 @@ int sensorFeuchtTempAbfrage(uint8_t pin) {
 			portInterrupt = 0;
 
 			//gesendetes Bit HIGH?
-			if (sum >= 20) {	//2us pro hochgezaehlten Bit
+			if (sum >= 35) {	//2us pro hochgezaehlten Bit
 				wert[i] |= (1 << j);
 			}
 		}
@@ -390,6 +397,11 @@ int sensorFeuchtTempAbfrage(uint8_t pin) {
 	//Paritaetspruefung
 	sum = wert[0] + wert[1] + wert[2] + wert[3];
 
+	// Paritaetssumme im Falle von DHT22 bestimmen
+	if (letzteAbrufzeit[sensorImArray][0] == 22) {
+		sum = sum % 256;
+	}
+
 #ifdef DEBUG
 	Serial.println("\n#############################");
 	Serial.print("Sensor ");
@@ -397,10 +409,6 @@ int sensorFeuchtTempAbfrage(uint8_t pin) {
 	if (sum != wert[4]) {
 		Serial.println("Paritaetspruefung fehlgeschlagen");
 	}
-	// Anzeige zur Fehlereingrenzung)
-	Serial.print("Fehler: ");
-	Serial.print(kontrolle);
-
 	Serial.println("\nBitwerte:\n------------");
 	for (i = 0; i < 5; i++) {
 		Serial.print("Bit");
@@ -417,34 +425,47 @@ int sensorFeuchtTempAbfrage(uint8_t pin) {
 		return -50;
 	}
 
-	if (kontrolle <0) {
-		return kontrolle;
-	}
-
 	// Pruefung auf Plausibilitaet der Daten ->-> muss noch gemaccht werden
 
 	//Werte schreiben in Array
 	wetterSensor[0][sensorImArray][1] = millis() / 1000;
-	wetterSensor[0][sensorImArray][2] = wert[3];
-	wetterSensor[0][sensorImArray][2] = wetterSensor[0][sensorImArray][2] / 10 + wert[2];
-	wetterSensor[0][sensorImArray][3] = wert[1];
-	wetterSensor[0][sensorImArray][3] = wetterSensor[0][sensorImArray][3] / 10 + wert[0];
 
-	letzteAbrufzeit[sensorImArray][0] = wetterSensor[0][sensorImArray][1];
+	//unterschiedliche Auswertuung der Bits zwischen DHT11 und DHT22:
+	//DHT22: schreibt 8 Bit-Werte, DHT22 schreibt 16-Bit-Werte, weiteres siehe Datenblatt
+	switch (letzteAbrufzeit[sensorImArray][0]) {
+	case 11:
+		wetterSensor[0][sensorImArray][2] = wert[3];
+		wetterSensor[0][sensorImArray][2] = wetterSensor[0][sensorImArray][2] / 10 + wert[2];
+		wetterSensor[0][sensorImArray][3] = wert[1];
+		wetterSensor[0][sensorImArray][3] = wetterSensor[0][sensorImArray][3] / 10 + wert[0];
+		break;
+	case 22:
+		wetterSensor[0][sensorImArray][2] = (wert[2] % 128) * 256;
+		wetterSensor[0][sensorImArray][2] = (wetterSensor[0][sensorImArray][2] + wert[3]) / 10;
+		wetterSensor[0][sensorImArray][3] = wert[0] * 256;
+		wetterSensor[0][sensorImArray][3] = (wetterSensor[0][sensorImArray][3] + wert[1]) / 10;
+		if ((wert[2] & (1 << 7)) == 128) {
+			wetterSensor[0][sensorImArray][2] *= -1;
+		}
+		break;
+	default: 
+		break;
+	}
+	letzteAbrufzeit[sensorImArray][1] = wetterSensor[0][sensorImArray][1];
 	return 1;
 }
 
 void verlaufArrayVorschieben() {
 	for (uint8_t historieEbene = 0; historieEbene < historischeWerteAnzahl; historieEbene++) {
 		for (uint8_t einzelnerSensor = 0; einzelnerSensor < 3; einzelnerSensor++) {
-			if ((((millis() / 1000) - letzteAbrufzeit[einzelnerSensor][1]) < abstandHistorie) 
-				|| (letzteAbrufzeit[einzelnerSensor][0] > wetterSensor[0][einzelnerSensor][1])) {
+			if ((((millis() / 1000) - letzteAbrufzeit[einzelnerSensor][2]) < abstandHistorie) 
+				|| (letzteAbrufzeit[einzelnerSensor][1] > wetterSensor[0][einzelnerSensor][1])) {
 				return;
 			}
 			for (uint8_t werteSensor = 0; werteSensor < 4; werteSensor++) {
 				wetterSensor[historieEbene + 1][einzelnerSensor][werteSensor] = wetterSensor[historieEbene][einzelnerSensor][werteSensor];
 			}
-			letzteAbrufzeit[einzelnerSensor][1] = (millis() / 1000);
+			letzteAbrufzeit[einzelnerSensor][2] = (millis() / 1000);
 #ifdef DEBUG
 			// Anzeige auf Seriellen Monitor
 			Serial.print("\n historischer Verlauf weitergeschoben, Sensor: ");
