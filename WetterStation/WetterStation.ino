@@ -31,7 +31,7 @@ volatile uint8_t timer2_over = 0;
 volatile uint8_t portInterrupt = 0;
 
 uint8_t timerTaster = 0;
-uint8_t blinkzeitLed = 1;	//zwischen 0 und 12, 0-> gar nicht blinken; 12 (ca.7s leuchten)- langsames blinken; 1-schnelles blinken
+uint8_t blinkzeitLed = 0;	//zwischen 0 und 15, 0-> gar nicht blinken; 12- langsames blinken; 1-schnelles blinken
 
 int8_t tasterBetaetigung = 0;	//0: nicht gedruckt, -1: muss entprellt werden, -2: ist entprellt, 1: gedrueckt, 2: lang gedruckt
 uint8_t anzeigeSensor = 0;	//welcher Sensor soll angezeigt werden? (0 -> 0.Wert im Array)
@@ -116,21 +116,17 @@ ISR(TIMER1_COMPA_vect) {
 	if ((tasterBetaetigung < 0) && (timerTaster > 0)) {
 		tasterBetaetigung = -2;
 	}
-	if (blinkzeitLed > 0) {
-		if (timer1_over / 2 == blinkzeitLed) {
-			PORTB ^= (1 << ledrtPD);  // LED toggelnd
-			timer1_over = 0;
-		}
+	if ((blinkzeitLed > 0) && ((timer1_over/2) == blinkzeitLed)) {
+		PORTB ^= (1 << ledrtPD);  // LED toggelnd
+		timer1_over = 0;
 	}
 	timer1_over++;
 	timerTaster++;
 }
 
-// Timer2 (Taster)
+// Timer2 (Sensoren)
 ISR(TIMER2_COMPA_vect) {
 	timer2_over++;
-	//Serial.print("TIMER2: ");
-	//Serial.println(timer2_over);
 }
 
 
@@ -151,9 +147,9 @@ void setup() {
 
 	// Deklarieren der I-O-Ports und Setzen der Pegel
 	DDRB |= (1 << ledrtPD);     // als Ausgang
-	PORTB |= (1 << ledrtPD);	//HIGH setzen
+	PORTB &= ~(1 << ledrtPD);	//LOW setzen
 	DDRB |= (1 << ledgePD);		// als Ausgang
-	PORTB |= (1 << ledgePD);	//HIGH setzen
+	PORTB &= ~(1 << ledgePD);	//LOW setzen
 
 	DDRB &= ~(1 << taster); // als Eingang setzen - LOW-aktiv 
 	PORTB |= (1 << taster); // Pull-Up-Widerstand am Arduino setzen
@@ -228,7 +224,7 @@ void loop() {
 	// Events bei neuen Sensorwerten
 	if (kontrolle > 0) {
     prozentBalkenZeigen("sarrus", -20, -30, 16);
-		aktuelleWerteAnzeigen();
+	//	aktuelleWerteAnzeigen();
 	}
 #ifdef DEBUG
 	if (kontrolle > 0) {
@@ -255,13 +251,15 @@ void loop() {
 	if (kontrolle != -99) {
 		Serial.print("Kontrolle: ");
 		Serial.println(kontrolle);
+		Serial.print("LED Blinkzeit: ");
+		Serial.println(blinkzeitLed);
 	}
 #endif // DEBUG
 
 
 	// Events bei neuen Sensorwerten
 	if (kontrolle > 0) {
-    prozentBalkenZeigen("sarrus", -20, -30, 16);
+		prozentBalkenZeigen("sarrus", -20, -30, 16);
 		aktuelleWerteAnzeigen();
 	}
 	// Events bei Tastendruck
@@ -275,6 +273,7 @@ void loop() {
 			Serial.println(tasterBetaetigung);
     #endif
 	}
+	pruefungFeuchtigkeit();
 }
 
 // ############## ABFRAGEN DES DIGITALEN SENSORS ############################
@@ -449,7 +448,7 @@ int sensorFeuchtTempAbfrage(uint8_t pin) {
 		}
 		break;
 	default: 
-		break;
+		return -97;
 	}
 	letzteAbrufzeit[sensorImArray][1] = wetterSensor[0][sensorImArray][1];
 	return 1;
@@ -508,7 +507,7 @@ void prozentBalkenZeigen (String bezeichnung, double geanderterWertAbsolut, doub
   
   int xKoordinate = maxCharZeichen * 0.5;
   int yKoordinate = 1;
-  double prozentInGanzeKaestchen = maxCharZeichen / 99.9 * geanderterWertProzentual* 0.5;
+  double prozentInGanzeKaestchen = maxCharZeichen / 100.0 * geanderterWertProzentual* 0.5;
 
   // positive Wertänderung verarbeiten
   if (prozentInGanzeKaestchen > 0)
@@ -537,4 +536,25 @@ void prozentBalkenZeigen (String bezeichnung, double geanderterWertAbsolut, doub
   lcd.setCursor(xKoordinate - 1 + prozentInGanzeKaestchen, yKoordinate);
   lcd.write(127);
   }
+}
+
+//LED schneller blinken lassen zwischen 60% und 100% Luftfeuchte
+void pruefungFeuchtigkeit() {
+	uint8_t maxFeuchtigkeit = 0;
+
+	for (int8_t sensorAbfragen = 0; sensorAbfragen < sensorAnzahl; sensorAbfragen++) {
+		if (wetterSensor[0][sensorAbfragen][3] > maxFeuchtigkeit) {
+			maxFeuchtigkeit = wetterSensor[0][sensorAbfragen][3];
+		}
+	}
+	if (maxFeuchtigkeit >= 60) {
+		maxFeuchtigkeit = (100 - maxFeuchtigkeit) / 8 * 3;
+		if (maxFeuchtigkeit < 1) {
+			maxFeuchtigkeit = 1;
+		}
+		blinkzeitLed = maxFeuchtigkeit;
+		return;
+	}
+	blinkzeitLed = 0;
+	PORTB &= ~(1 << ledrtPD); //LED ausschalten
 }
