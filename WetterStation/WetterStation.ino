@@ -40,6 +40,30 @@ uint8_t tasterGedruckt = 0;	//0: nicht gedruckt, 1: gedrueckt, 2: lang gedruckt7
 uint8_t anzeigeSensor = 0;	//welcher Sensor soll angezeigt werden? (0 -> 0.Wert im Array)
 
 
+//eigene Symbole
+char thermometerChar = 0;
+char feuchtigkeitChar = 0;
+byte thermometerByte[8] = {
+  B01110,
+  B01010,
+  B01010,
+  B01010,
+  B11011,
+  B10001,
+  B11011,
+  B01110
+};
+byte feuchtigkeitByte[8] = {
+  B00000,
+  B00100,
+  B00100,
+  B01110,
+  B01110,
+  B11111,
+  B01110,
+  B00100
+};
+
 // PORTDEKLARATIONEN
 #define ledrtPD	PB5			//PIN fuer rote LED
 #define ledgePD	PB4			//PIN fuer geldbe 
@@ -113,18 +137,17 @@ ISR(TIMER2_COMPA_vect) {
 // ############################ SETUP-ROUTINE ########################################
 void setup() {
 	lcd.begin(lcdBreite, lcdHoehe);
-#ifdef DEBUG
-	// Ausgabe am Monitor vorbereiten (Debug)
-	Serial.begin(9600);
-	Serial.println("\n\nAusgabe am Monitor");
-	Serial.println("------------------");
-	Serial.print("eepromMaximum = ");
-	Serial.println(eepromMaximum);
-	Serial.println("------------------");
-#endif
-
-	//LCD-Display aktivieren
-	lcd.begin(20, 4);
+  lcd.createChar(feuchtigkeitChar, feuchtigkeitByte);
+  lcd.createChar(thermometerChar, thermometerByte);
+  #ifdef DEBUG
+  	// Ausgabe am Monitor vorbereiten (Debug)
+  	Serial.begin(9600);
+  	Serial.println("\n\nAusgabe am Monitor");
+  	Serial.println("------------------");
+  	Serial.print("eepromMaximum = ");
+  	Serial.println(eepromMaximum);
+  	Serial.println("------------------");
+  #endif
 
 	// Deklarieren der I-O-Ports und Setzen der Pegel
 	DDRB |= (1 << ledrtPD);     // als Ausgang
@@ -201,8 +224,8 @@ void loop() {
 	
 	// Events bei neuen Sensorwerten
 	if (kontrolle > 0) {
+    prozentBalkenZeigen("sarrus", -20, -30, 16);
 		aktuelleWerteAnzeigen();
-		verlaufArrayVorschieben();
 	}
 #ifdef DEBUG
 	if (kontrolle > 0) {
@@ -238,18 +261,18 @@ void loop() {
 
 	// Events bei neuen Sensorwerten
 	if (kontrolle > 0) {
+    prozentBalkenZeigen("sarrus", -20, -30, 16);
 		aktuelleWerteAnzeigen();
-		verlaufArrayVorschieben();
 	}
 	// Events bei Tastendruck
 	if (tasterGedruckt > 0) {
 		tasterGedruckt = 0;
 		anzeigeSensor = (anzeigeSensor + 1) % 3;
 		aktuelleWerteAnzeigen();
-#ifdef DEBUG
-		Serial.print("AnzeigeSensor: ");
-		Serial.println(anzeigeSensor);
-#endif
+    #ifdef DEBUG
+    		Serial.print("AnzeigeSensor: ");
+    		Serial.println(anzeigeSensor);
+    #endif
 	}
 }
 
@@ -441,11 +464,55 @@ void aktuelleWerteAnzeigen() {
 
 	//Werte auf LCD drucken
 	lcd.setCursor(0, 0);
-	lcd.print("Luftf.: ");
+	//lcd.print("Luftf.: ");
+  lcd.write(thermometerChar);
 	lcd.setCursor(10, 0);
 	lcd.print(wetterSensor[0][anzeigeSensor][3]);
 	lcd.setCursor(0, 1);
-	lcd.print("Temp.: ");
+	//lcd.print("Temp.: ");
+  lcd.write(feuchtigkeitChar);
 	lcd.setCursor(10, 1);
 	lcd.print(wetterSensor[0][anzeigeSensor][2]);
+}
+
+
+void prozentBalkenZeigen (String bezeichnung, double geanderterWertAbsolut, double geanderterWertProzentual, int maxCharZeichen)
+{
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print(bezeichnung);
+  lcd.setCursor(10, 0);
+  lcd.print(geanderterWertAbsolut);
+  
+  int xKoordinate = maxCharZeichen * 0.5;
+  int yKoordinate = 1;
+  double prozentInGanzeKaestchen = maxCharZeichen / 99.9 * geanderterWertProzentual* 0.5;
+
+  // positive Wertänderung verarbeiten
+  if (prozentInGanzeKaestchen > 0)
+  {
+    for (int i = 0; i < prozentInGanzeKaestchen; i++)
+    {
+      lcd.setCursor(xKoordinate - 1 + i, yKoordinate);
+      lcd.write(255);
+    }
+  
+  //Änderungspfeil anzeigen
+  lcd.setCursor(xKoordinate + 1 + prozentInGanzeKaestchen, yKoordinate);
+  lcd.write(126);
+  }
+  
+  // negative Wertänderung verarbeiten
+  if (prozentInGanzeKaestchen < 0)
+  {
+    for (int i = 0; i > prozentInGanzeKaestchen; i--)
+    {
+      lcd.setCursor(xKoordinate - 1 + i, yKoordinate);
+      lcd.write(255);
+    }
+  
+  //Änderungspfeil anzeigen
+  lcd.setCursor(xKoordinate - 1 + prozentInGanzeKaestchen, yKoordinate);
+  lcd.write(127);
+  }
 }
