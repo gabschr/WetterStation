@@ -26,7 +26,8 @@ uint32_t letzteAbrufzeit[sensorAnzahl][3]; //0. Stelle: Senssor-Typ, 1.Stelle: l
 
 unsigned int eepromMaximum = 0;
 
-volatile uint8_t timer1_over = 0;
+volatile uint8_t timer0_over = 0;
+volatile uint32_t timer1Sek = 0;	//fortwaehrende Sekundenzaehlung
 volatile uint8_t timer2_over = 0;
 volatile uint8_t portInterrupt = 0;
 
@@ -63,7 +64,7 @@ byte feuchtigkeitByte[8] = {
 
 // PORTDEKLARATIONEN
 #define ledrtPD	PB5			//PIN fuer rote LED
-#define ledgePD	PB4			//PIN fuer geldbe 
+#define ledgePD	PB4			//PIN fuer gelbe LED
 #define taster  PB0			//PIN fuer Taster zum Umschalten der Sensoren (PIN8)
 #define feuchtLuftPD  PD3	//PIN fuer den Feuchtigkeits- und Temp- Sensor (PIN3)
 #define dht22Sensor   PD4	//PIN fuer DHT22-Sensor (Feuchtigkeit+Temp)
@@ -81,11 +82,12 @@ ISR(PCINT0_vect) {
 	if ((aktuellerTasterWert == 0) && (tasterBetaetigung == 0)) {	//wurde taster zum ersten Mal betaetigt?
 		tasterBetaetigung = -1;
 		timerTaster = 0;
+		PORTB |= (1 << ledgePD);  //gelbe LED als Kontrolle an
 		return;
 	}
 	if ((aktuellerTasterWert == 1) && (tasterBetaetigung == -2)) {	//Taster wurde losgelassen und war vorher stabil
-		PORTB ^= (1 << ledgePD);  // LED toggelnd
-		if (timerTaster > 40) {	// 400 * 50ms = 2s
+		PORTB &= ~(1 << ledgePD); //gelbe LED aus
+		if (timerTaster > 125) {	// 125 * 16ms = 2s
 			tasterBetaetigung = 2;
 #ifdef DEBUG
 			Serial.println("\nTaster laenger als 2s gedrueckt");
@@ -110,19 +112,25 @@ ISR(PCINT2_vect) { //Sensoren an PORT D, die nicht an D2 und D3 haengen
 }
 
 
-// Timer1 Taster und rote LED (30ms)
-ISR(TIMER1_COMPA_vect) {
+// Timer0 Taster und rote LED (16ms)
+ISR(TIMER0_COMPA_vect) {
 	// 50 ms nach Tastendruck warten, um Prellen auszuschließen
-	if ((tasterBetaetigung < 0) && (timerTaster > 0)) {
+	if ((tasterBetaetigung < 0) && (timerTaster > 3)) {
 		tasterBetaetigung = -2;
 	}
-	if ((blinkzeitLed > 0) && ((timer1_over/2) == blinkzeitLed)) {
+	if ((blinkzeitLed > 0) && ((timer0_over/6) == blinkzeitLed)) {
 		PORTB ^= (1 << ledrtPD);  // LED toggelnd
-		timer1_over = 0;
+		timer0_over = 0;
 	}
-	timer1_over++;
+	timer0_over++;
 	timerTaster++;
 }
+
+// Timer1 (Sekunden fortlaufend)
+ISR(TIMER1_COMPA_vect) {
+	timer1Sek++;
+}
+
 
 // Timer2 (Sensoren)
 ISR(TIMER2_COMPA_vect) {
@@ -168,7 +176,10 @@ void setup() {
 		wetterSensor[i][1][0] = dht22Sensor;	//DHT22 an Port D4
 		wetterSensor[i][2][0] = 23;  //Analoger EIngang 23 (+24) fuer analogen Sensor (A0+A1)
 	}
-
+//#ifdef DEBUG
+//	wetterSensor[0][2][3] = 80;
+//#endif // DEBUG
+	
 	// leere Array letzte Zugriffszeit und setze Sensor-Nr.
 	for (uint8_t i = 0; i < 3; i++) {
 		for(uint8_t j =0; j < 3; j++){
@@ -182,14 +193,23 @@ void setup() {
 	// ()()()()()())()()()()() INTERRUPTS ()()()()()()()()()()()()()()()()()()()()
 	cli();	//deaktivieren von Interrupts
 
-	// TIMER1 fuer Taster und LED
-	TCCR1A = 0; // TCCR1A register auf 0 setzen
-	TCCR1B = 0; // TCCR1B register auf 0 setzen
-	TCNT1 = 0; // Zaehlerwert zuruecksetzen
-	OCR1A = 12499;	//MAX bei 16-BIT-TIMER: 65535, bei 8-Bit 2 hoch 8 - 1 = 255
-	TCCR1B |= (1 << CS11) | (1 << CS10);
+	// TIMER0 fuer Taster und LED
+	TCCR0A = 0; // TCCR1A register auf 0 setzen
+	TCCR0B = 0; // TCCR1B register auf 0 setzen
+	TCNT0 = 0; // Zaehlerwert zuruecksetzen
+	OCR0A = 255;	//MAX bei 16-BIT-TIMER: 65535, bei 8-Bit 2 hoch 8 - 1 = 255
+	TCCR0B |= (1 << CS02) | (1 << CS00);
 	TCCR1B |= (1 << WGM12); // CTC Mode
-	TIMSK1 |= (1 << OCIE1A); // timer compare interrupt aktivieren
+	TIMSK0 |= (1 << OCIE1A); // timer compare interrupt aktivieren
+
+	// TIMER1 fuer fortlaufende Sek-Zaehlung
+	TCCR1A = 0;
+	TCCR1B = 0;
+	TCNT1 = 0;
+	OCR1A = 15624;
+	TCCR1B |= (1 << CS12) | (1 << CS10);
+	TCCR1B |= (1 << WGM22);
+	TIMSK1 |= (1 << OCIE2A);
 
 	// TIMER2 fuer Sensorabfrage
 	TCCR2A = 0;
@@ -297,12 +317,12 @@ int sensorFeuchtTempAbfrage(uint8_t pin) {
 	}
 
 	//Zeitintervall der Abfrage ueberpruefen
-	if (((millis() / 1000) - letzteAbrufzeit[sensorImArray][1]) < abrufIntervallSekunden) {
+	if (((timer1Sek) - letzteAbrufzeit[sensorImArray][1]) < abrufIntervallSekunden) {
 		if (letzteAbrufzeit[sensorImArray][1] != 0) {// nach Einschalten soll gemessen werden
 			return -99;
 		}
 	}
-	letzteAbrufzeit[sensorImArray][1] = (millis() / 1000);
+	letzteAbrufzeit[sensorImArray][1] = timer1Sek;
 
 	// BUFFER leeren
 	for (i = 0; i < 5; i++) {
@@ -427,7 +447,7 @@ int sensorFeuchtTempAbfrage(uint8_t pin) {
 	// Pruefung auf Plausibilitaet der Daten ->-> muss noch gemaccht werden
 
 	//Werte schreiben in Array
-	wetterSensor[0][sensorImArray][1] = millis() / 1000;
+	wetterSensor[0][sensorImArray][1] = timer1Sek;
 
 	//unterschiedliche Auswertuung der Bits zwischen DHT11 und DHT22:
 	//DHT22: schreibt 8 Bit-Werte, DHT22 schreibt 16-Bit-Werte, weiteres siehe Datenblatt
@@ -457,14 +477,14 @@ int sensorFeuchtTempAbfrage(uint8_t pin) {
 void verlaufArrayVorschieben() {
 	for (uint8_t historieEbene = 0; historieEbene < historischeWerteAnzahl; historieEbene++) {
 		for (uint8_t einzelnerSensor = 0; einzelnerSensor < 3; einzelnerSensor++) {
-			if ((((millis() / 1000) - letzteAbrufzeit[einzelnerSensor][2]) < abstandHistorie) 
+			if (((timer1Sek - letzteAbrufzeit[einzelnerSensor][2]) < abstandHistorie) 
 				|| (letzteAbrufzeit[einzelnerSensor][1] > wetterSensor[0][einzelnerSensor][1])) {
 				return;
 			}
 			for (uint8_t werteSensor = 0; werteSensor < 4; werteSensor++) {
 				wetterSensor[historieEbene + 1][einzelnerSensor][werteSensor] = wetterSensor[historieEbene][einzelnerSensor][werteSensor];
 			}
-			letzteAbrufzeit[einzelnerSensor][2] = (millis() / 1000);
+			letzteAbrufzeit[einzelnerSensor][2] = timer1Sek;
 #ifdef DEBUG
 			// Anzeige auf Seriellen Monitor
 			Serial.print("\n historischer Verlauf weitergeschoben, Sensor: ");
@@ -540,7 +560,7 @@ void prozentBalkenZeigen (String bezeichnung, double geanderterWertAbsolut, doub
 
 //LED schneller blinken lassen zwischen 60% und 100% Luftfeuchte
 void pruefungFeuchtigkeit() {
-	uint8_t maxFeuchtigkeit = 0;
+	double maxFeuchtigkeit = 0;
 
 	for (int8_t sensorAbfragen = 0; sensorAbfragen < sensorAnzahl; sensorAbfragen++) {
 		if (wetterSensor[0][sensorAbfragen][3] > maxFeuchtigkeit) {
@@ -548,7 +568,7 @@ void pruefungFeuchtigkeit() {
 		}
 	}
 	if (maxFeuchtigkeit >= 60) {
-		maxFeuchtigkeit = (100 - maxFeuchtigkeit) / 8 * 3;
+		maxFeuchtigkeit = (100 - maxFeuchtigkeit) * 3/8;
 		if (maxFeuchtigkeit < 1) {
 			maxFeuchtigkeit = 1;
 		}
