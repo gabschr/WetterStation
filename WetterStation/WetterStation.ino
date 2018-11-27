@@ -7,7 +7,7 @@
 
 //Display auf Port initalisieren
 LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
-const int lcdBreite = 20;
+const int lcdBreite = 16;
 const int lcdHoehe = 2;
 
 //Konstanten
@@ -40,26 +40,59 @@ uint8_t anzeigeSensor = 0;	//welcher Sensor soll angezeigt werden? (0 -> 0.Wert 
 
 //eigene Symbole
 char thermometerChar = 0;
-char feuchtigkeitChar = 1;
 byte thermometerByte[8] = {
   B01110,
   B01010,
-  B01010,
-  B01010,
-  B11011,
-  B10001,
-  B11011,
-  B01110
-};
-byte feuchtigkeitByte[8] = {
-  B00000,
-  B00100,
-  B00100,
   B01110,
   B01110,
   B11111,
+  B11111,
+  B11111,
+  B01110
+};
+char gradChar = 1;
+byte gradZeichen[8] = {
+  B11100,
+  B10100,
+  B11100,
+  B00000,
+  B00000,
+  B00000,
+  B00000,
+  B00000
+};
+char celsiusChar = 2;
+byte clesiusZeichen[8] = {
   B01110,
-  B00100
+  B10001,
+  B10000,
+  B10000,
+  B10000,
+  B10000,
+  B10001,
+  B01110
+};
+char prozentChar = 3;
+byte prozentZeichen[8] = {
+  B11000,
+  B11000,
+  B00001,
+  B00010,
+  B00100,
+  B01000,
+  B10011,
+  B00011
+};
+char tropfenChar = 4;
+byte tropfenZeichen[8] = {
+  B00100,
+  B00100,
+  B01010,
+  B01010,
+  B10001,
+  B10001,
+  B10001,
+  B01110
 };
 
 // PORTDEKLARATIONEN
@@ -140,9 +173,13 @@ ISR(TIMER2_COMPA_vect) {
 
 // ############################ SETUP-ROUTINE ########################################
 void setup() {
+  //Display initialisieren
 	lcd.begin(lcdBreite, lcdHoehe);
-  lcd.createChar(feuchtigkeitChar, feuchtigkeitByte);
   lcd.createChar(thermometerChar, thermometerByte);
+  lcd.createChar(gradChar, gradZeichen);
+  lcd.createChar(celsiusChar, clesiusZeichen);
+  lcd.createChar(prozentChar, prozentZeichen);
+  lcd.createChar(tropfenChar, tropfenZeichen);
   #ifdef DEBUG
   	// Ausgabe am Monitor vorbereiten (Debug)
   	Serial.begin(9600);
@@ -243,8 +280,7 @@ void loop() {
 	
 	// Events bei neuen Sensorwerten
 	if (kontrolle > 0) {
-    prozentBalkenZeigen("sarrus", -20, -30, 16);
-	//	aktuelleWerteAnzeigen();
+		aktuelleWerteAnzeigen(lcdBreite, lcdHoehe);
 	}
 #ifdef DEBUG
 	if (kontrolle > 0) {
@@ -279,14 +315,13 @@ void loop() {
 
 	// Events bei neuen Sensorwerten
 	if (kontrolle > 0) {
-		prozentBalkenZeigen("sarrus", -20, -30, 16);
-		aktuelleWerteAnzeigen();
+		aktuelleWerteAnzeigen(lcdBreite, lcdHoehe);
 	}
 	// Events bei Tastendruck
 	if (tasterBetaetigung > 0) {
 		tasterBetaetigung = 0;
 		anzeigeSensor = (anzeigeSensor + 1) % 3;
-		aktuelleWerteAnzeigen();
+		aktuelleWerteAnzeigen(lcdBreite, lcdHoehe);
     #ifdef DEBUG
     		Serial.print("AnzeigeSensor: ");
     		Serial.println(anzeigeSensor);
@@ -500,20 +535,29 @@ void verlaufArrayVorschieben() {
 	}
 }
 
-void aktuelleWerteAnzeigen() {
-	lcd.clear();
-
-	//Werte auf LCD drucken
-	lcd.setCursor(0, 0);
-	//lcd.print("Luftf.: ");
+void aktuelleWerteAnzeigen(int displayBreite, int displayHoehe) {
+  if(displayHoehe<1 || displayBreite <15){
+    #ifdef DEBUG
+      Serial.print("\n Das definierte Display ist zu klein.");
+    #endif  
+    return;
+  }
+  lcd.clear();
+  lcd.setCursor(0, displayHoehe-1);
   lcd.write(thermometerChar);
-	lcd.setCursor(10, 0);
-	lcd.print(wetterSensor[0][anzeigeSensor][3]);
-	lcd.setCursor(0, 1);
-	//lcd.print("Temp.: ");
-  lcd.write(feuchtigkeitChar);
-	lcd.setCursor(10, 1);
-	lcd.print(wetterSensor[0][anzeigeSensor][2]);
+  lcd.print(wetterSensor[0][anzeigeSensor][2]);
+  lcd.write(gradChar);
+  lcd.write(celsiusChar);
+  lcd.setCursor(displayBreite-7, displayHoehe-1);
+  lcd.write(tropfenChar);
+  lcd.print(wetterSensor[0][anzeigeSensor][3]);
+  lcd.write(prozentChar);
+
+  if(displayHoehe>1){
+    lcd.setCursor(0, 0);
+    lcd.print("Sensor: ");
+    lcd.print(wetterSensor[0][anzeigeSensor][0]);
+  }
 }
 
 
