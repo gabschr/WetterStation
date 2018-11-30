@@ -99,8 +99,8 @@ byte tropfenZeichen[8] = {
 #define taster  PB0			//PIN fuer Taster zum Umschalten der Sensoren (PIN8)
 #define feuchtLuftPD  PD3	//PIN fuer den Feuchtigkeits- und Temp- Sensor (DHT11) (PIN3)
 #define dht22Sensor   PD4	//PIN fuer DHT22-Sensor (Feuchtigkeit+Temp) (PIN4)
-#define analogFeucht  A0	//Analog-Feuchtigkeit-Sensor
-#define analogTemp	  A1	//Analog-Temperatur-Sensor
+#define analogFeucht  A0	//Analog-Feuchtigkeit-Sensor (PORT A0 - 14)
+#define analogTemp	  A1	//Analog-Temperatur-Sensor (PORT A1 - 15)
 
 // ######################## INTERRUPT SERVICE ROUTINEN ###############################
 
@@ -325,7 +325,7 @@ void loop() {
 	// Events bei Tastendruck
 	if (tasterBetaetigung > 0) {
 		tasterBetaetigung = 0;
-		anzeigeSensor = (anzeigeSensor + 1) % 3;
+		anzeigeSensor = (anzeigeSensor + 1) % sensorAnzahl;
 		aktuelleWerteAnzeigen(lcdBreite, lcdHoehe);
 #ifdef DEBUG
 		Serial.print("AnzeigeSensor: ");
@@ -562,16 +562,18 @@ int analogeSensoren(int pin) {
 #endif // DEBUG
 
 	//Werte außerhalb des Messbereichs fuer Sensoren
-	if (wert[0] > 614) {
+	//Wert ueber ca. 3V
+	if (wert[0] > 620) {
 		return -90;
 	}
-	if (wert[1] > 205) {
+	//Wert ueber ca. 1,5V
+	if (wert[1] > 310) {
 		return -90;
 	}
 
 	// Plausibilitaetspruefung muss noch durchgeführt werden
 	
-	//DIGITALWERT richtig umrechnen
+	//Werte ausgeben- DIGITALWERT richtig umrechnen
 	wetterSensor[0][sensorImArray][1] = timer1Sek;
 	wetterSensor[0][sensorImArray][2] = (double)wert[1] * 500 / 1023;
 	wetterSensor[0][sensorImArray][3] = (double)wert[0] * 500 / 3069;
