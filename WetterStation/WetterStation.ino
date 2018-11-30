@@ -408,6 +408,12 @@ int sensorFeuchtTempAbfrage(uint8_t pin) {
 		timer2_over = 0;
 		portInterrupt = 0;
 		sum = MAXZAEHL;
+		//Warte 4us
+		while (TCNT2 <= 2) {
+			if (sum-- <= 0) {
+				return -29 - i;
+			}
+		}
 		do {
 			if (sum-- <= 0) {
 				return -20 - i;
@@ -426,6 +432,12 @@ int sensorFeuchtTempAbfrage(uint8_t pin) {
 				sum = MAXZAEHL;
 				TCNT2 = 0; // setzte timer 0 zurueck
 				timer2_over = 0;
+				//Warte 4us
+				while (TCNT2 <= 2) {
+					if (sum-- <= 0) {
+						return -29 - i;
+					}
+				}
 				do {
 					if (sum-- <= 0) {
 						return -30 - k;
