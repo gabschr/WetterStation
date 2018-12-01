@@ -36,7 +36,8 @@ const uint8_t sensorAnzahl = 3; // Anzahl vorhandener Sensoren
 //Werte 1.Dimesion: 0: Nr. des Sensors, 1: Messzeitpunkt der Messung (ab Start vom Arduino in s), 2.Wert: Temp, 3.Wert: Luftfeuchte
 double wetterSensor[historischeWerteAnzahl][sensorAnzahl + 1][4];
 
-uint32_t letzteAbrufzeit[sensorAnzahl + 1][3]; //0. Stelle: Senssor-Typ, 1.Stelle: letzter Abfragewert Sensor, 1. Stelle: letzte Verschiebung historischer Daten
+uint32_t letzteAbrufzeit[sensorAnzahl + 1][2]; //0. Stelle: Senssor-Typ, 1.Stelle: letzter Abfragewert Sensor
+uint32_t letzteVerschiebungszeitpunkt;
 
 volatile uint8_t timer0_over = 0;
 volatile uint32_t timer1Sek = 0;	//fortwaehrende Sekundenzaehlung
@@ -207,8 +208,8 @@ void setup() {
 	}
 
 	// leere Array letzte Zugriffszeit und setze Sensor-Nr.
-	for (uint8_t i = 0; i < 3; i++) {
-		for (uint8_t j = 0; j < 3; j++) {
+	for (uint8_t i = 0; i < sensorAnzahl; i++) {
+		for (uint8_t j = 0; j < 2; j++) {
 			letzteAbrufzeit[i][j] = 0;
 		}
 	}
@@ -372,9 +373,9 @@ void tasterAuswerten() {
 }
 
 void wertAenderungAnzeigen() {
-	double abrufDifferenz = timer1Sek - letzteAbrufzeit[anzeigeSensor][2];
+	//double abrufDifferenz = timer1Sek - letzteAbrufzeit[anzeigeSensor][2];
 	double wertAenderungProzentual = wetterSensor[0][anzeigeSensor][3] - wetterSensor[1][anzeigeSensor][3];
-	if (letzteAbrufzeit[anzeigeSensor][2] == timer1Sek || tasterBetaetigung == 2) {
+	if (letzteVerschiebungszeitpunkt == timer1Sek || tasterBetaetigung == 2) {
 		prozentBalkenZeigen(wertAenderungProzentual, lcdBreite);
 	}
 	tasterBetaetigung = 3;
@@ -656,30 +657,38 @@ int analogeSensoren(int pin) {
 }
 
 void verlaufArrayVorschieben() {
-	for (uint8_t historieEbene = 0; historieEbene < historischeWerteAnzahl; historieEbene++) {
-		for (uint8_t einzelnerSensor = 0; einzelnerSensor < 3; einzelnerSensor++) {
-			if (((timer1Sek - letzteAbrufzeit[einzelnerSensor][2]) < abstandHistorie)
-				|| (letzteAbrufzeit[einzelnerSensor][1] > wetterSensor[0][einzelnerSensor][1])) {
-				return;
-			}
-			for (uint8_t werteSensor = 0; werteSensor < 4; werteSensor++) {
-				wetterSensor[historieEbene + 1][einzelnerSensor][werteSensor] = wetterSensor[historieEbene][einzelnerSensor][werteSensor];
-			}
-			letzteAbrufzeit[einzelnerSensor][2] = timer1Sek;
-#ifdef DEBUG
-			// Anzeige auf Seriellen Monitor
-			Serial.print("\n historischer Verlauf weitergeschoben, Sensor: ");
-			Serial.println(wetterSensor[0][einzelnerSensor][0]);
-			Serial.print("Daten des 1. Historischen Wertes: ");
-			for (uint8_t werteSensor = 0; werteSensor < 4; werteSensor++) {
-				Serial.print(wetterSensor[1][einzelnerSensor][werteSensor]);
-				Serial.print(", ");
-			}
-			Serial.println();
-#endif	
-		}
-	}
-	return;
+  int aktuelleZeit = timer1Sek;
+  if (((aktuelleZeit - letzteVerschiebungszeitpunkt) < abstandHistorie)) {
+    return;
+  }
+
+  for (int i = historischeWerteAnzahl-1; i >= 0; i--) {
+    for (int j = 0; j < sensorAnzahl; j++) {
+      for (uint8_t k = 0; k < 4; k++) {
+        wetterSensor[i + 1][j][k] = wetterSensor[i][j][k];
+      }
+      #ifdef DEBUG
+          // Anzeige auf Seriellen Monitor
+          Serial.print("\n historischer Verlauf weitergeschoben");   
+          Serial.print("   ");
+          for (uint8_t k = 0; k < historischeWerteAnzahl; k++) {
+            Serial.print(k);
+            Serial.print(": ");
+            Serial.print(wetterSensor[k][j][1]);
+            Serial.print(", ");
+            Serial.print(wetterSensor[k][j][2]);
+            Serial.print(", ");
+            Serial.print(wetterSensor[k][j][3]);
+            Serial.print(", ");
+          }
+       
+          Serial.println();
+      #endif  
+    }
+  }
+
+  letzteVerschiebungszeitpunkt = aktuelleZeit;
+  return;
 }
 
 void sensorNameFestlegen() {
