@@ -37,7 +37,7 @@ const uint8_t sensorAnzahl = 3; // Anzahl vorhandener Sensoren
 //Werte 1.Dimesion: 0: Nr. des Sensors, 1: Messzeitpunkt der Messung (ab Start vom Arduino in s), 2.Wert: Temp, 3.Wert: Luftfeuchte
 double wetterSensor[historischeWerteAnzahl][sensorAnzahl + 1][4];
 
-uint32_t letzteAbrufzeit[sensorAnzahl + 1][2]; //0. Stelle: Senssor-Typ, 1.Stelle: letzter Abfragewert Sensor
+uint32_t letzteAbrufzeit[sensorAnzahl + 1][3]; //0. Stelle: Senssor-Typ, 1.Stelle: letzter Abfragewert Sensor
 uint32_t letzteVerschiebungszeitpunkt;
 
 volatile uint8_t timer0_over = 0;
@@ -210,7 +210,7 @@ void setup() {
 
 	// leere Array letzte Zugriffszeit und setze Sensor-Nr.
 	for (uint8_t i = 0; i < sensorAnzahl; i++) {
-		for (uint8_t j = 0; j < 2; j++) {
+		for (uint8_t j = 0; j < 3; j++) {
 			letzteAbrufzeit[i][j] = 0;
 		}
 	}
@@ -374,16 +374,25 @@ void tasterAuswerten() {
 }
 
 void wertAenderungAnzeigen() {
-	if (letzteVerschiebungszeitpunkt == timer1Sek || tasterBetaetigung == 2) {
-    aktuellePosition++;
-    if(aktuellePosition > historischeWerteAnzahl){
-        aktuellePosition = 1;
-      }
-    double wertAenderungProzentual = wetterSensor[0][anzeigeSensor][3] - wetterSensor[aktuellePosition][anzeigeSensor][3];
+	double wertAenderungProzentual = 0;
+
+	if (tasterBetaetigung == 2) {
+		tasterBetaetigung = 3;
+		letzteAbrufzeit[anzeigeSensor][2] = timer1Sek;
+		wertAenderungProzentual = wetterSensor[0][anzeigeSensor][3] - wetterSensor[aktuellePosition][anzeigeSensor][3];
 		prozentBalkenZeigen(wertAenderungProzentual, lcdBreite, aktuellePosition);
 	}
-	tasterBetaetigung = 3;
+
+	if (timer1Sek - letzteAbrufzeit[anzeigeSensor][2] < 4) {
+		return;
+	}
+	wertAenderungProzentual = wetterSensor[0][anzeigeSensor][3] - wetterSensor[aktuellePosition + 1][anzeigeSensor][3];
+	prozentBalkenZeigen(wertAenderungProzentual, lcdBreite, aktuellePosition + 1);
+	letzteAbrufzeit[anzeigeSensor][2] = timer1Sek;
+	aktuellePosition = (aktuellePosition + 1) % (historischeWerteAnzahl - 1);
+	return;
 }
+	
 
 //************* ABFRAGEN DES DIGITALEN SENSORS *****************
 int sensorFeuchtTempAbfrage(uint8_t pin) {
