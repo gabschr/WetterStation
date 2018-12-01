@@ -286,6 +286,23 @@ void setup() {
 	sei();	//aktivieren von Interrupts
 }
 
+void sensorNameFestlegen() {
+	sensorBezeichnung = "Default";
+	switch (anzeigeSensor) {
+	case 0:
+		sensorBezeichnung = "Flur";
+		break;
+	case 1:
+		sensorBezeichnung = "aussen";
+		break;
+	case 2:
+		sensorBezeichnung = "Keller";
+		break;
+	default:
+		sensorBezeichnung = "Testmod.";
+		break;
+	}
+}
 
 //************* HAUPTPROGRAMM (LOOP) ***************************
 void loop() {
@@ -340,60 +357,12 @@ void loop() {
 		tasterAuswerten();
 	}
 	pruefungFeuchtigkeitUeber60();
-
-
 	verlaufArrayVorschieben();
 
 	if (tasterBetaetigung > 0) {
 		tasterAuswerten();
 	}
-
 }
-
-void tasterAuswerten() {
-	// Events bei Tastendruck
-	switch (tasterBetaetigung) {
-	case 0:
-		aktuelleWerteAnzeigen(lcdBreite, lcdHoehe);
-		break;
-	case 1:
-		tasterBetaetigung = 0;
-		anzeigeSensor = (anzeigeSensor + 1) % (sensorAnzahl);
-		aktuelleWerteAnzeigen(lcdBreite, lcdHoehe);
-		break;
-	case 2:
-	case 3:
-		wertAenderungAnzeigen();
-		break;
-	case 99:
-		testWetterStation();
-		break;
-	default:
-		break;
-	}
-}
-
-void wertAenderungAnzeigen() {
-	double wertAenderungProzentual = 0;
-
-	if (tasterBetaetigung == 2) {
-		tasterBetaetigung = 3;
-		letzteAbrufzeit[anzeigeSensor][2] = timer1Sek;
-		wertAenderungProzentual = wetterSensor[0][anzeigeSensor][3] - wetterSensor[aktuellePosition][anzeigeSensor][3];
-		prozentBalkenZeigen(wertAenderungProzentual, lcdBreite, aktuellePosition);
-		return;
-	}
-
-	if (timer1Sek - letzteAbrufzeit[anzeigeSensor][2] < 4) {
-		return;
-	}
-	wertAenderungProzentual = wetterSensor[0][anzeigeSensor][3] - wetterSensor[aktuellePosition + 1][anzeigeSensor][3];
-	prozentBalkenZeigen(wertAenderungProzentual, lcdBreite, aktuellePosition + 1);
-	letzteAbrufzeit[anzeigeSensor][2] = timer1Sek;
-	aktuellePosition = (aktuellePosition + 1) % (historischeWerteAnzahl - 1);
-	return;
-}
-	
 
 //************* ABFRAGEN DES DIGITALEN SENSORS *****************
 int sensorFeuchtTempAbfrage(uint8_t pin) {
@@ -670,55 +639,25 @@ int analogeSensoren(int pin) {
 	return 1;
 }
 
-void verlaufArrayVorschieben() {
-  int aktuelleZeit = timer1Sek;
-  if (((aktuelleZeit - letzteVerschiebungszeitpunkt) < abstandHistorie)) {
-    return;
-  }
-
-  for (int i = historischeWerteAnzahl-1; i >= 0; i--) {
-    for (int j = 0; j < sensorAnzahl; j++) {
-      for (uint8_t k = 0; k < 4; k++) {
-        wetterSensor[i + 1][j][k] = wetterSensor[i][j][k];
-      }
-      #ifdef DEBUG
-          // Anzeige auf Seriellen Monitor
-          Serial.print("\n historischer Verlauf weitergeschoben");   
-          Serial.print("   ");
-          for (uint8_t k = 0; k < historischeWerteAnzahl; k++) {
-            Serial.print(k);
-            Serial.print(": ");
-            Serial.print(wetterSensor[k][j][1]);
-            Serial.print(", ");
-            Serial.print(wetterSensor[k][j][2]);
-            Serial.print(", ");
-            Serial.print(wetterSensor[k][j][3]);
-            Serial.print(", ");
-          }
-       
-          Serial.println();
-      #endif  
-    }
-  }
-
-  letzteVerschiebungszeitpunkt = aktuelleZeit;
-  return;
-}
-
-void sensorNameFestlegen() {
-	sensorBezeichnung = "Default";
-	switch (anzeigeSensor) {
+void tasterAuswerten() {
+	// Events bei Tastendruck
+	switch (tasterBetaetigung) {
 	case 0:
-		sensorBezeichnung = "Flur";
+		aktuelleWerteAnzeigen(lcdBreite, lcdHoehe);
 		break;
 	case 1:
-		sensorBezeichnung = "aussen";
+		tasterBetaetigung = 0;
+		anzeigeSensor = (anzeigeSensor + 1) % (sensorAnzahl);
+		aktuelleWerteAnzeigen(lcdBreite, lcdHoehe);
 		break;
 	case 2:
-		sensorBezeichnung = "Keller";
+	case 3:
+		wertAenderungAnzeigen();
+		break;
+	case 99:
+		testWetterStation();
 		break;
 	default:
-		sensorBezeichnung = "Testmod.";
 		break;
 	}
 }
@@ -749,6 +688,26 @@ void aktuelleWerteAnzeigen(int displayBreite, int displayHoehe) {
 	}
 }
 
+void wertAenderungAnzeigen() {
+	double wertAenderungProzentual = 0;
+
+	if (tasterBetaetigung == 2) {
+		tasterBetaetigung = 3;
+		letzteAbrufzeit[anzeigeSensor][2] = timer1Sek;
+		wertAenderungProzentual = wetterSensor[0][anzeigeSensor][3] - wetterSensor[aktuellePosition][anzeigeSensor][3];
+		prozentBalkenZeigen(wertAenderungProzentual, lcdBreite, aktuellePosition);
+		return;
+	}
+
+	if (timer1Sek - letzteAbrufzeit[anzeigeSensor][2] < 4) {
+		return;
+	}
+	wertAenderungProzentual = wetterSensor[0][anzeigeSensor][3] - wetterSensor[aktuellePosition + 1][anzeigeSensor][3];
+	prozentBalkenZeigen(wertAenderungProzentual, lcdBreite, aktuellePosition + 1);
+	letzteAbrufzeit[anzeigeSensor][2] = timer1Sek;
+	aktuellePosition = (aktuellePosition + 1) % (historischeWerteAnzahl - 1);
+	return;
+}
 
 void prozentBalkenZeigen(double geanderterWertProzentual, int maxCharZeichen, int differenzStelle) {
 	sensorNameFestlegen();
@@ -757,7 +716,7 @@ void prozentBalkenZeigen(double geanderterWertProzentual, int maxCharZeichen, in
 	lcd.print(sensorBezeichnung);
 	lcd.setCursor(maxCharZeichen - 9, 0);
 	lcd.write(deltaChar);
-  lcd.print(differenzStelle);
+	lcd.print(differenzStelle);
 	lcd.write(tropfenChar);
 	lcd.print(geanderterWertProzentual);
 	lcd.write(prozentChar);
@@ -791,7 +750,42 @@ void prozentBalkenZeigen(double geanderterWertProzentual, int maxCharZeichen, in
 	}
 }
 
-//LED schneller blinken lassen zwischen 60% und 100% Luftfeuchte
+void verlaufArrayVorschieben() {
+	int aktuelleZeit = timer1Sek;
+	if (((aktuelleZeit - letzteVerschiebungszeitpunkt) < abstandHistorie)) {
+		return;
+	}
+
+	for (int i = historischeWerteAnzahl - 1; i >= 0; i--) {
+		for (int j = 0; j < sensorAnzahl; j++) {
+			for (uint8_t k = 0; k < 4; k++) {
+				wetterSensor[i + 1][j][k] = wetterSensor[i][j][k];
+			}
+#ifdef DEBUG
+			// Anzeige auf Seriellen Monitor
+			Serial.print("\n historischer Verlauf weitergeschoben");
+			Serial.print("   ");
+			for (uint8_t k = 0; k < historischeWerteAnzahl; k++) {
+				Serial.print(k);
+				Serial.print(": ");
+				Serial.print(wetterSensor[k][j][1]);
+				Serial.print(", ");
+				Serial.print(wetterSensor[k][j][2]);
+				Serial.print(", ");
+				Serial.print(wetterSensor[k][j][3]);
+				Serial.print(", ");
+			}
+
+			Serial.println();
+#endif  
+		}
+	}
+
+	letzteVerschiebungszeitpunkt = aktuelleZeit;
+	return;
+}
+
+//LED-Blinken einstellen für Luftfeuchte-Wetre zwischen 60% und 100% einstellen
 void pruefungFeuchtigkeitUeber60() {
 	double maxFeuchtigkeit = 0;
 
