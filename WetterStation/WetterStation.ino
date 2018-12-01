@@ -31,6 +31,7 @@
 const int lcdBreite = 16; //breite des Displays
 const int lcdHoehe = 2; //Höhe des Displays
 const uint8_t historischeWerteAnzahl = 5; //Anzahl gespeicherter Messergebnisse
+int aktuellePosition = 1;
 const uint8_t sensorAnzahl = 3; // Anzahl vorhandener Sensoren
 //Array fuer Temp und Feuchtigkeit, v.l.n.r.: Historie- 3.Dimension,  Sensor-Nr.(PORT)- 2. Dimension, Sensor-Werte- 1. Dimension
 //Werte 1.Dimesion: 0: Nr. des Sensors, 1: Messzeitpunkt der Messung (ab Start vom Arduino in s), 2.Wert: Temp, 3.Wert: Luftfeuchte
@@ -373,10 +374,13 @@ void tasterAuswerten() {
 }
 
 void wertAenderungAnzeigen() {
-	//double abrufDifferenz = timer1Sek - letzteAbrufzeit[anzeigeSensor][2];
-	double wertAenderungProzentual = wetterSensor[0][anzeigeSensor][3] - wetterSensor[1][anzeigeSensor][3];
 	if (letzteVerschiebungszeitpunkt == timer1Sek || tasterBetaetigung == 2) {
-		prozentBalkenZeigen(wertAenderungProzentual, lcdBreite);
+    aktuellePosition++;
+    if(aktuellePosition > historischeWerteAnzahl){
+        aktuellePosition = 1;
+      }
+    double wertAenderungProzentual = wetterSensor[0][anzeigeSensor][3] - wetterSensor[aktuellePosition][anzeigeSensor][3];
+		prozentBalkenZeigen(wertAenderungProzentual, lcdBreite, aktuellePosition);
 	}
 	tasterBetaetigung = 3;
 }
@@ -736,13 +740,14 @@ void aktuelleWerteAnzeigen(int displayBreite, int displayHoehe) {
 }
 
 
-void prozentBalkenZeigen(double geanderterWertProzentual, int maxCharZeichen) {
+void prozentBalkenZeigen(double geanderterWertProzentual, int maxCharZeichen, int differenzStelle) {
 	sensorNameFestlegen();
 	lcd.clear();
 	lcd.setCursor(0, 0);
 	lcd.print(sensorBezeichnung);
-	lcd.setCursor(maxCharZeichen - 8, 0);
+	lcd.setCursor(maxCharZeichen - 9, 0);
 	lcd.write(deltaChar);
+  lcd.print(differenzStelle);
 	lcd.write(tropfenChar);
 	lcd.print(geanderterWertProzentual);
 	lcd.write(prozentChar);
