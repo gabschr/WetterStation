@@ -1,23 +1,37 @@
-//Debug Modus
+/***************************************************************
+ * 
+ * Projekt:     Wetterstation mit Innen / Außentemperatur
+ * Version:     V0.1
+ * Date:        01.12.2012
+ * Author:      Gabriel Schreyer, Henning Nußbaum
+ * Company:     BA Dresden
+ * 
+****************************************************************/
+
+//************* Debug Modus ************************************
 #define DEBUG 1 //auskommentieren für reale Nutzung
 
+//************* Includes ***************************************
 //Display - Bibliotheken
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
-
-//Display auf Port initalisieren
-LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
-const int lcdBreite = 16;
-const int lcdHoehe = 2;
-
-//Konstanten
 #define MAXZAEHL 65000
 #define abrufIntervallSekunden 5
-#define abstandHistorie 60
+#define abstandHistorie 15
+// PORTDEKLARATIONEN
+#define ledrtPD  PB5     //PIN fuer rote LED
+#define ledgePD PB4     //PIN fuer gelbe LED
+#define taster  PB0     //PIN fuer Taster zum Umschalten der Sensoren (PIN8)
+#define feuchtLuftPD  PD3 //PIN fuer den Feuchtigkeits- und Temp- Sensor (DHT11) (PIN3)
+#define dht22Sensor   PD4 //PIN fuer DHT22-Sensor (Feuchtigkeit+Temp) (PIN4)
+#define analogFeucht  A0  //Analog-Feuchtigkeit-Sensor (PORT A0 - 14)
+#define analogTemp    A1  //Analog-Temperatur-Sensor (PORT A1 - 15)
 
-// GLOBALE VARIABLEN
-const uint8_t historischeWerteAnzahl = 5;
-const uint8_t sensorAnzahl = 3;
+//************* globale Variablen *******************************
+const int lcdBreite = 16; //breite des Displays
+const int lcdHoehe = 2; //Höhe des Displays
+const uint8_t historischeWerteAnzahl = 5; //Anzahl gespeicherter Messergebnisse
+const uint8_t sensorAnzahl = 3; // Anzahl vorhandener Sensoren
 //Array fuer Temp und Feuchtigkeit, v.l.n.r.: Historie- 3.Dimension,  Sensor-Nr.(PORT)- 2. Dimension, Sensor-Werte- 1. Dimension
 //Werte 1.Dimesion: 0: Nr. des Sensors, 1: Messzeitpunkt der Messung (ab Start vom Arduino in s), 2.Wert: Temp, 3.Wert: Luftfeuchte
 double wetterSensor[historischeWerteAnzahl][sensorAnzahl+1][4];
@@ -34,10 +48,9 @@ uint8_t blinkzeitLedRt = 0;	//zwischen 0 und 15, 0-> gar nicht blinken; 12- lang
 uint8_t blinkzeitLedGe = 0;
 int8_t tasterBetaetigung = 0;	//0: nicht gedruckt, -1: muss entprellt werden, -2: ist entprellt, 1: gedrueckt, 2: lang gedruckt
 uint8_t anzeigeSensor = 0;	//welcher Sensor soll angezeigt werden? (0 -> 0.Wert im Array)
-int8_t neueHistorischeWerte = 0;
 String sensorBezeichnung = "unbk.";
 
-//eigene Symbole
+//************* eigene Symbole ********************************
 char thermometerChar = 0;
 byte thermometerByte[8] = { B01110, B01010, B01110, B01110, B11111, B11111, B11111, B01110 };
 char gradChar = 1;
@@ -51,17 +64,10 @@ byte tropfenZeichen[8] = { B00100,B00100,B01010,B01010,B10001,B10001,B10001,B011
 char deltaChar = 5;
 byte deltaZeichen[8] = { B00000, B00000, B00000, B00100, B01010, B11111, B00000, B00000};
 
-// PORTDEKLARATIONEN
-#define ledrtPD	PB5			//PIN fuer rote LED
-#define ledgePD	PB4			//PIN fuer gelbe LED
-#define taster  PB0			//PIN fuer Taster zum Umschalten der Sensoren (PIN8)
-#define feuchtLuftPD  PD3	//PIN fuer den Feuchtigkeits- und Temp- Sensor (DHT11) (PIN3)
-#define dht22Sensor   PD4	//PIN fuer DHT22-Sensor (Feuchtigkeit+Temp) (PIN4)
-#define analogFeucht  A0	//Analog-Feuchtigkeit-Sensor (PORT A0 - 14)
-#define analogTemp	  A1	//Analog-Temperatur-Sensor (PORT A1 - 15)
+//Display auf Port initalisieren
+LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
 
-// ######################## INTERRUPT SERVICE ROUTINEN ###############################
-
+//************* INTERRUPT SERVICE ROUTINEN *********************
 // Routine zum Abfragen der Taster
 ISR(PCINT0_vect) {
 	uint8_t aktuellerTasterWert;
@@ -147,7 +153,7 @@ ISR(TIMER2_COMPA_vect) {
 }
 
 
-// ############################ SETUP-ROUTINE ########################################
+//************* SETUP-ROUTINE **********************************
 void setup() {
 	//Display initialisieren
 	lcd.begin(lcdBreite, lcdHoehe);
@@ -267,10 +273,10 @@ void setup() {
 	sei();	//aktivieren von Interrupts
 }
 
-// ########################## HAUPTPROGRAMM (LOOP) ######################################
+
+//************* HAUPTPROGRAMM (LOOP) ***************************
 void loop() {
 	int8_t kontrolle = 0;
-  neueHistorischeWerte = 0;
 	kontrolle = sensorFeuchtTempAbfrage(feuchtLuftPD);
 
 	// Events bei neuen Sensorwerten
@@ -323,7 +329,7 @@ void loop() {
   pruefungFeuchtigkeitUeber60();
  
 
-  neueHistorischeWerte = verlaufArrayVorschieben();
+  verlaufArrayVorschieben();
   
   if(tasterBetaetigung > 0){
     tasterAuswerten();
@@ -357,13 +363,13 @@ void tasterAuswerten(){
 void wertAenderungAnzeigen(){ 
   double abrufDifferenz = timer1Sek - letzteAbrufzeit[anzeigeSensor][2];
   double wertAenderungProzentual = wetterSensor[0][anzeigeSensor][3] - wetterSensor[1][anzeigeSensor][3];
-  if ( (neueHistorischeWerte > 0 && tasterBetaetigung == 3) || tasterBetaetigung == 2) {
+  if (letzteAbrufzeit[anzeigeSensor][2] == timer1Sek || tasterBetaetigung == 2) {
     prozentBalkenZeigen(sensorBezeichnung, wertAenderungProzentual, lcdBreite);
   }
   tasterBetaetigung = 3;
 }
 
-// ############## ABFRAGEN DES DIGITALEN SENSORS ############################
+//************* ABFRAGEN DES DIGITALEN SENSORS *****************
 int sensorFeuchtTempAbfrage(uint8_t pin) {
 	//Variablen
 	int8_t sensorImArray = -1;
@@ -481,7 +487,9 @@ int sensorFeuchtTempAbfrage(uint8_t pin) {
 			if (sum >= 35) {	//2us pro hochgezaehlten Bit
 				wert[i] |= (1 << j);
 			}
-			probe[i] += sum;
+      #ifdef DEBUG
+			  probe[i] += sum;
+      #endif
 		}
 	}
 	DDRD |= (1 << pin);  // als Ausgang setzen
@@ -558,7 +566,7 @@ int sensorFeuchtTempAbfrage(uint8_t pin) {
 	return 1;
 }
 
-// ################ ABFRAGEN DES ANALOGEN SENSORS ############################
+//************* ABFRAGEN DES ANALOGEN SENSORS ******************
 // PIN, was uebergeben wird: Feuchtigkeitssensor, Temp-Sensor ein PIN danach
 int analogeSensoren(int pin) {
 	uint16_t zaehler = MAXZAEHL;
@@ -636,12 +644,12 @@ int analogeSensoren(int pin) {
 	return 1;
 }
 
-int verlaufArrayVorschieben() {
+void verlaufArrayVorschieben() {
 	for (uint8_t historieEbene = 0; historieEbene < historischeWerteAnzahl; historieEbene++) {
 		for (uint8_t einzelnerSensor = 0; einzelnerSensor < 3; einzelnerSensor++) {
 			if (((timer1Sek - letzteAbrufzeit[einzelnerSensor][2]) < abstandHistorie)
 				|| (letzteAbrufzeit[einzelnerSensor][1] > wetterSensor[0][einzelnerSensor][1])) {
-				return -99;
+				return;
 			}
 			for (uint8_t werteSensor = 0; werteSensor < 4; werteSensor++) {
 				wetterSensor[historieEbene + 1][einzelnerSensor][werteSensor] = wetterSensor[historieEbene][einzelnerSensor][werteSensor];
@@ -660,7 +668,7 @@ int verlaufArrayVorschieben() {
 #endif	
 		}
 	}
- return 1;
+ return;
 }
 
 void sensorNameFestlegen(){
@@ -676,7 +684,7 @@ void sensorNameFestlegen(){
       sensorBezeichnung = "Keller";
       break;
     default:
-      sensorBezeichnung = "unbek.";
+      sensorBezeichnung = "Testmod.";
       break;
   }
 }
@@ -685,10 +693,10 @@ void aktuelleWerteAnzeigen(int displayBreite, int displayHoehe) {
   sensorNameFestlegen();
     
 	if (displayHoehe < 1 || displayBreite < 15) {
-  #ifdef DEBUG
-  		Serial.print("\n Das definierte Display ist zu klein.");
-  #endif  
-  return;
+    #ifdef DEBUG
+    		Serial.print("\n Das definierte Display ist zu klein.");
+    #endif  
+    return;
 	}
 	lcd.clear();
 	lcd.setCursor(0, displayHoehe - 1);
@@ -708,8 +716,7 @@ void aktuelleWerteAnzeigen(int displayBreite, int displayHoehe) {
 }
 
 
-void prozentBalkenZeigen(String bezeichnung, double geanderterWertProzentual, int maxCharZeichen)
-{
+void prozentBalkenZeigen(String bezeichnung, double geanderterWertProzentual, int maxCharZeichen){
   sensorNameFestlegen();
   lcd.clear();
   lcd.setCursor(0, 0);
@@ -725,10 +732,8 @@ void prozentBalkenZeigen(String bezeichnung, double geanderterWertProzentual, in
   double prozentInGanzeKaestchen = maxCharZeichen / 100.0 * geanderterWertProzentual* 0.5;
 
   // positive Wertänderung verarbeiten
-  if (prozentInGanzeKaestchen > 0)
-  {
-    for (int i = 0; i < prozentInGanzeKaestchen; i++)
-    {
+  if (prozentInGanzeKaestchen > 0){
+    for (int i = 0; i < prozentInGanzeKaestchen; i++){
       lcd.setCursor(xKoordinate - 1 + i, yKoordinate);
       lcd.write(255);
     }
@@ -739,10 +744,8 @@ void prozentBalkenZeigen(String bezeichnung, double geanderterWertProzentual, in
   }
 
   // negative Wertänderung verarbeiten
-  if (prozentInGanzeKaestchen < 0)
-  {
-    for (int i = 0; i > prozentInGanzeKaestchen; i--)
-    {
+  if (prozentInGanzeKaestchen < 0){
+    for (int i = 0; i > prozentInGanzeKaestchen; i--){
       lcd.setCursor(xKoordinate - 1 + i, yKoordinate);
       lcd.write(255);
     }
@@ -772,6 +775,8 @@ void pruefungFeuchtigkeitUeber60() {
 	}
 	blinkzeitLedRt = 0;
 	PORTB &= ~(1 << ledrtPD); //LED ausschalten
+ 
+  return;
 }
 
 void testWetterStation() {
