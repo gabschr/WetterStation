@@ -381,6 +381,7 @@ void wertAenderungAnzeigen() {
 		letzteAbrufzeit[anzeigeSensor][2] = timer1Sek;
 		wertAenderungProzentual = wetterSensor[0][anzeigeSensor][3] - wetterSensor[aktuellePosition][anzeigeSensor][3];
 		prozentBalkenZeigen(wertAenderungProzentual, lcdBreite, aktuellePosition);
+		return;
 	}
 
 	if (timer1Sek - letzteAbrufzeit[anzeigeSensor][2] < 4) {
