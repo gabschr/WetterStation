@@ -32,66 +32,22 @@ volatile uint8_t timer2_over = 0;
 volatile uint8_t portInterrupt = 0;
 
 uint8_t timerTaster = 0;
-uint8_t blinkzeitLed = 0;	//zwischen 0 und 15, 0-> gar nicht blinken; 12- langsames blinken; 1-schnelles blinken
+uint8_t blinkzeitLedRt = 0;	//zwischen 0 und 15, 0-> gar nicht blinken; 12- langsames blinken; 1-schnelles blinken
+uint8_t blinkzeitLedGe = 0;
 int8_t tasterBetaetigung = 0;	//0: nicht gedruckt, -1: muss entprellt werden, -2: ist entprellt, 1: gedrueckt, 2: lang gedruckt
 uint8_t anzeigeSensor = 0;	//welcher Sensor soll angezeigt werden? (0 -> 0.Wert im Array)
 
 //eigene Symbole
 char thermometerChar = 0;
-byte thermometerByte[8] = {
-  B01110,
-  B01010,
-  B01110,
-  B01110,
-  B11111,
-  B11111,
-  B11111,
-  B01110
-};
+byte thermometerByte[8] = { B01110, B01010, B01110, B01110, B11111, B11111, B11111, B01110 };
 char gradChar = 1;
-byte gradZeichen[8] = {
-  B11100,
-  B10100,
-  B11100,
-  B00000,
-  B00000,
-  B00000,
-  B00000,
-  B00000
-};
+byte gradZeichen[8] = { B11100, B10100, B11100, B00000, B00000, B00000, B00000, B00000 };
 char celsiusChar = 2;
-byte clesiusZeichen[8] = {
-  B01110,
-  B10001,
-  B10000,
-  B10000,
-  B10000,
-  B10000,
-  B10001,
-  B01110
-};
+byte clesiusZeichen[8] = { B01110,B10001,B10000,B10000,B10000,B10000,B10001,B01110 };
 char prozentChar = 3;
-byte prozentZeichen[8] = {
-  B11000,
-  B11000,
-  B00001,
-  B00010,
-  B00100,
-  B01000,
-  B10011,
-  B00011
-};
+byte prozentZeichen[8] = { B11000,B11000,B00001,B00010,B00100,B01000,B10011,B00011 };
 char tropfenChar = 4;
-byte tropfenZeichen[8] = {
-  B00100,
-  B00100,
-  B01010,
-  B01010,
-  B10001,
-  B10001,
-  B10001,
-  B01110
-};
+byte tropfenZeichen[8] = { B00100,B00100,B01010,B01010,B10001,B10001,B10001,B01110 };
 
 // PORTDEKLARATIONEN
 #define ledrtPD	PB5			//PIN fuer rote LED
@@ -120,7 +76,7 @@ ISR(PCINT0_vect) {
 	if ((aktuellerTasterWert == 1) && (tasterBetaetigung == -2)) {	//Taster wurde losgelassen und war vorher stabil
 		PORTB &= ~(1 << ledgePD); //gelbe LED aus
 		if (timerTaster > 150) {	//(Testmodus)
-			tasterBetaetigung = 3;
+			tasterBetaetigung = 99;
 			return;
 		}
 		if (timerTaster > 125) {	//125 * 16ms = 2s
@@ -130,12 +86,13 @@ ISR(PCINT0_vect) {
 		tasterBetaetigung = 1;
 		return;
 	}
-	if (aktuellerTasterWert == 0 && tasterBetaetigung == 3) {	//Abbruch der Testroutine
+	if (aktuellerTasterWert == 0 && tasterBetaetigung == 99) {	//Abbruch der Testroutine
 		tasterBetaetigung = 0;
 		anzeigeSensor = 0;
 		wetterSensor[0][sensorAnzahl][2] = 0;
 		wetterSensor[0][sensorAnzahl][3] = 0;
 		anzeigeSensor = 0;
+		PORTB &= ~(1 << ledgePD);	//LEDge ausschalten
 		return;
 	}
 }
@@ -154,10 +111,11 @@ ISR(PCINT2_vect) {
 	}
 }
 
-// Timer0 Taster und rote LED (16ms)
+// Timer2 Taster und rote LED (16ms)
 ISR(TIMER0_COMPA_vect) {
 	timer0_over++;
 	timerTaster++;
+	blinkzeitLedGe++;
 	// 50 ms nach Tastendruck warten, um Prellen auszuschließen
 	if ((tasterBetaetigung < 0) && (timerTaster > 3)) {
 		tasterBetaetigung = -2;
@@ -166,9 +124,13 @@ ISR(TIMER0_COMPA_vect) {
 	if (timerTaster > 160) {
 		PORTB &= ~(1 << ledgePD); //gelbe LED aus
 	}
-	if ((blinkzeitLed > 0) && ((timer0_over / 6) == blinkzeitLed)) {
-		PORTB ^= (1 << ledrtPD);  // LED toggelnd
+	if ((blinkzeitLedRt > 0) && ((timer0_over / 6) == blinkzeitLedRt)) {
+		PORTB ^= (1 << ledrtPD);  //LED toggelnd
 		timer0_over = 0;
+	}
+	if (tasterBetaetigung == 99 && blinkzeitLedGe > 50) {	//TEST-MODUS?
+		PORTB ^= (1 << ledgePD);  //LED toggelnd
+		blinkzeitLedGe = 0;
 	}
 }
 
@@ -177,7 +139,7 @@ ISR(TIMER1_COMPA_vect) {
 	timer1Sek++;
 }
 
-// Timer2 (Sensoren)
+// Timer0 (Sensoren)
 ISR(TIMER2_COMPA_vect) {
 	timer2_over++;
 }
@@ -268,7 +230,7 @@ void setup() {
 	TCCR0B = 0;
 	TCNT0 = 0;
 	OCR0A = 255;	//MAX bei 16-BIT-TIMER: 65535, bei 8-Bit 2 hoch 8 - 1 = 255
-	TCCR0B |= (1 << CS02) | (1 << CS00); //PRESCALER
+	TCCR0B |= (1 << CS02) | (1 << CS00);
 	TCCR1B |= (1 << WGM12); // CTC Mode
 	TIMSK0 |= (1 << OCIE1A); // timer compare interrupt aktivieren
 
@@ -341,7 +303,7 @@ void loop() {
 		Serial.print("Kontrolle: ");
 		Serial.println(kontrolle);
 		Serial.print("LED Blinkzeit: ");
-		Serial.println(blinkzeitLed);
+		Serial.println(blinkzeitLedRt);
 		Serial.print("TasterBetaetigung: ");
 		Serial.println(tasterBetaetigung);
 		Serial.print("Anzeige Sensor: ");
@@ -363,7 +325,7 @@ void loop() {
 	case 2:
 		tasterBetaetigung = 0;
 		break;
-	case 3:
+	case 99:
 		testWetterStation();
 		break;
 	default:
@@ -396,6 +358,10 @@ int sensorFeuchtTempAbfrage(uint8_t pin) {
 	uint8_t wert[5];    //Bytes des Sensorwertes
 	uint8_t bitwert = 7;  //Bit der einzelnen Bytes des Sensorwertes
 	uint16_t sum = 0;	//Zeit fuer Datenbit, Paritaetssumme
+#ifdef DEBUG
+	uint8_t probe[5];
+#endif // DEBUG
+
 
 	//Sensor-PIN im Array finden
 	for (i = 0; i < sensorAnzahl; i++) {
@@ -502,9 +468,11 @@ int sensorFeuchtTempAbfrage(uint8_t pin) {
 			if (sum >= 35) {	//2us pro hochgezaehlten Bit
 				wert[i] |= (1 << j);
 			}
+			probe[i] += sum;
 		}
 	}
 	DDRD |= (1 << pin);  // als Ausgang setzen
+	portInterrupt = sum;
 	
 	//Paritaetspruefung
 	sum = wert[0] + wert[1] + wert[2] + wert[3];
@@ -529,8 +497,20 @@ int sensorFeuchtTempAbfrage(uint8_t pin) {
 		Serial.print(wert[i]);
 		Serial.println(", ");
 	}
+	Serial.println("\nProbewerte:\n------------");
+	for (i = 0; i < 5; i++) {
+		Serial.print("Bit");
+		Serial.print(i);
+		Serial.print(" - ");
+		Serial.print(probe[i] / 8);
+		Serial.println(", ");
+	}
 	Serial.print("\nParitaetssumme: ");
 	Serial.println(sum);
+	Serial.print("Timer0: ");
+	Serial.println(timer2_over);
+	Serial.print("Port Interrupt: ");
+	Serial.println(portInterrupt);
 #endif
 
 	if (sum != wert[4]) {
@@ -750,10 +730,10 @@ void pruefungFeuchtigkeitUeber60() {
 		if (maxFeuchtigkeit < 1) {
 			maxFeuchtigkeit = 1;
 		}
-		blinkzeitLed = maxFeuchtigkeit;
+		blinkzeitLedRt = maxFeuchtigkeit;
 		return;
 	}
-	blinkzeitLed = 0;
+	blinkzeitLedRt = 0;
 	PORTB &= ~(1 << ledrtPD); //LED ausschalten
 }
 
@@ -776,6 +756,7 @@ void testWetterStation() {
 			wetterSensor[0][sensorAnzahl][3] = 0;
 			tasterBetaetigung = 0;
 			anzeigeSensor = 0;
+			PORTB &= ~(1 << ledgePD);	//LEDge ausschalten
 			aktuelleWerteAnzeigen(lcdBreite, lcdHoehe);
 		}
 	}
