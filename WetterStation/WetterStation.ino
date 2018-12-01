@@ -16,15 +16,13 @@ const int lcdHoehe = 2;
 #define abstandHistorie 60
 
 // GLOBALE VARIABLEN
-const uint8_t historischeWerteAnzahl = 10;
+const uint8_t historischeWerteAnzahl = 5;
 const uint8_t sensorAnzahl = 3;
 //Array fuer Temp und Feuchtigkeit, v.l.n.r.: Historie- 3.Dimension,  Sensor-Nr.(PORT)- 2. Dimension, Sensor-Werte- 1. Dimension
 //Werte 1.Dimesion: 0: Nr. des Sensors, 1: Messzeitpunkt der Messung (ab Start vom Arduino in s), 2.Wert: Temp, 3.Wert: Luftfeuchte
 double wetterSensor[historischeWerteAnzahl][sensorAnzahl+1][4];
 
 uint32_t letzteAbrufzeit[sensorAnzahl+1][3]; //0. Stelle: Senssor-Typ, 1.Stelle: letzter Abfragewert Sensor, 1. Stelle: letzte Verschiebung historischer Daten
-
-unsigned int eepromMaximum = 0;
 
 volatile uint8_t timer0_over = 0;
 volatile uint32_t timer1Sek = 0;	//fortwaehrende Sekundenzaehlung
@@ -36,6 +34,8 @@ uint8_t blinkzeitLedRt = 0;	//zwischen 0 und 15, 0-> gar nicht blinken; 12- lang
 uint8_t blinkzeitLedGe = 0;
 int8_t tasterBetaetigung = 0;	//0: nicht gedruckt, -1: muss entprellt werden, -2: ist entprellt, 1: gedrueckt, 2: lang gedruckt
 uint8_t anzeigeSensor = 0;	//welcher Sensor soll angezeigt werden? (0 -> 0.Wert im Array)
+int8_t neueHistorischeWerte = 0;
+String sensorBezeichnung = "unbk.";
 
 //eigene Symbole
 char thermometerChar = 0;
@@ -48,6 +48,8 @@ char prozentChar = 3;
 byte prozentZeichen[8] = { B11000,B11000,B00001,B00010,B00100,B01000,B10011,B00011 };
 char tropfenChar = 4;
 byte tropfenZeichen[8] = { B00100,B00100,B01010,B01010,B10001,B10001,B10001,B01110 };
+char deltaChar = 5;
+byte deltaZeichen[8] = { B00000, B00000, B00000, B00100, B01010, B11111, B00000, B00000};
 
 // PORTDEKLARATIONEN
 #define ledrtPD	PB5			//PIN fuer rote LED
@@ -75,18 +77,18 @@ ISR(PCINT0_vect) {
 	}
 	if ((aktuellerTasterWert == 1) && (tasterBetaetigung == -2)) {	//Taster wurde losgelassen und war vorher stabil
 		PORTB &= ~(1 << ledgePD); //gelbe LED aus
-		if (timerTaster > 150) {	//(Testmodus)
+		if (timerTaster > 200) {	//(Testmodus)
 			tasterBetaetigung = 99;
 			return;
 		}
-		if (timerTaster > 125) {	//125 * 16ms = 2s
+		if (timerTaster > 100) {	//2s
 			tasterBetaetigung = 2;
 			return;
 		}
 		tasterBetaetigung = 1;
 		return;
 	}
-	if (aktuellerTasterWert == 0 && tasterBetaetigung == 99) {	//Abbruch der Testroutine
+	if (aktuellerTasterWert == 0 && tasterBetaetigung >= 2) {	//Abbruch der Testroutine
 		tasterBetaetigung = 0;
 		anzeigeSensor = 0;
 		wetterSensor[0][sensorAnzahl][2] = 0;
@@ -121,7 +123,7 @@ ISR(TIMER0_COMPA_vect) {
 		tasterBetaetigung = -2;
 	}
 	// wenn waehrend des Entprellens Taster los gelassen wurde, soll LED auch irgendwann aus gehen
-	if (timerTaster > 160) {
+	if (timerTaster > 110) {
 		PORTB &= ~(1 << ledgePD); //gelbe LED aus
 	}
 	if ((blinkzeitLedRt > 0) && ((timer0_over / 6) == blinkzeitLedRt)) {
@@ -154,14 +156,11 @@ void setup() {
 	lcd.createChar(celsiusChar, clesiusZeichen);
 	lcd.createChar(prozentChar, prozentZeichen);
 	lcd.createChar(tropfenChar, tropfenZeichen);
+  lcd.createChar(deltaChar, deltaZeichen);
 #ifdef DEBUG
 	// Ausgabe am Monitor vorbereiten (Debug)
 	Serial.begin(9600);
 	Serial.println("\n\nAusgabe am Monitor");
-	Serial.println("------------------");
-	Serial.print("eepromMaximum = ");
-	Serial.println(eepromMaximum);
-	Serial.println("------------------");
 #endif
 
 	// Deklarieren der I-O-Ports und Setzen der Pegel
@@ -177,7 +176,7 @@ void setup() {
 
 	// Variablen zuruecksetzen
 	// leere Array wetterSensor und fülle mit Sensor-Nummer
-	for (uint8_t i = 0; i < 6; i++) {
+	for (uint8_t i = 0; i < historischeWerteAnzahl; i++) {
 		for (uint8_t j = 0; j < sensorAnzahl+1; j++) {
 			for (uint8_t k = 0; k < 4; k++) {
 				wetterSensor[i][j][k] = 0;
@@ -271,11 +270,12 @@ void setup() {
 // ########################## HAUPTPROGRAMM (LOOP) ######################################
 void loop() {
 	int8_t kontrolle = 0;
+  neueHistorischeWerte = 0;
 	kontrolle = sensorFeuchtTempAbfrage(feuchtLuftPD);
 
 	// Events bei neuen Sensorwerten
 	if (kontrolle > 0) {
-		aktuelleWerteAnzeigen(lcdBreite, lcdHoehe);
+		tasterAuswerten();
 	}
 #ifdef DEBUG
 	if (kontrolle > 0) {
@@ -313,41 +313,54 @@ void loop() {
 
 	// Events bei neuen Sensorwerten
 	if (kontrolle > 0) {
-		aktuelleWerteAnzeigen(lcdBreite, lcdHoehe);
-	}
-	// Events bei Tastendruck
-	switch (tasterBetaetigung) {
-	case 1:
-		tasterBetaetigung = 0;
-		anzeigeSensor = (anzeigeSensor + 1) % (sensorAnzahl);
-		aktuelleWerteAnzeigen(lcdBreite, lcdHoehe);
-		break;
-	case 2:
-		tasterBetaetigung = 0;
-		break;
-	case 99:
-		testWetterStation();
-		break;
-	default:
-		break;
+		tasterAuswerten();
 	}
 
+  kontrolle = analogeSensoren(analogFeucht);
+  if (kontrolle > 0) {
+    tasterAuswerten();
+  }
+  pruefungFeuchtigkeitUeber60();
+ 
 
-	/*if (tasterBetaetigung > 0) {
-		tasterBetaetigung = 0;
-		anzeigeSensor = (anzeigeSensor + 1) % (sensorAnzahl);
-		aktuelleWerteAnzeigen(lcdBreite, lcdHoehe);
-#ifdef DEBUG
-		Serial.print("AnzeigeSensor: ");
-		Serial.println(anzeigeSensor);
-		Serial.println(tasterBetaetigung);
-#endif
-	}*/
-	kontrolle = analogeSensoren(analogFeucht);
-	if (kontrolle > 0) {
-		aktuelleWerteAnzeigen(lcdBreite, lcdHoehe);
-	}
-	pruefungFeuchtigkeitUeber60();
+  neueHistorischeWerte = verlaufArrayVorschieben();
+  
+  if(tasterBetaetigung > 0){
+    tasterAuswerten();
+  }
+  
+}
+
+void tasterAuswerten(){
+  // Events bei Tastendruck
+  switch (tasterBetaetigung) {
+  case 0:
+   aktuelleWerteAnzeigen(lcdBreite, lcdHoehe);
+   break;
+  case 1:
+    tasterBetaetigung = 0;
+    anzeigeSensor = (anzeigeSensor + 1) % (sensorAnzahl);
+    aktuelleWerteAnzeigen(lcdBreite, lcdHoehe);
+    break;
+  case 2:
+  case 3:
+    wertAenderungAnzeigen();
+    break;
+  case 99:
+    testWetterStation();
+    break;
+  default:
+    break;
+  }  
+}
+
+void wertAenderungAnzeigen(){ 
+  double abrufDifferenz = timer1Sek - letzteAbrufzeit[anzeigeSensor][2];
+  double wertAenderungProzentual = wetterSensor[0][anzeigeSensor][3] - wetterSensor[1][anzeigeSensor][3];
+  if ( (neueHistorischeWerte > 0 && tasterBetaetigung == 3) || tasterBetaetigung == 2) {
+    prozentBalkenZeigen(sensorBezeichnung, wertAenderungProzentual, lcdBreite);
+  }
+  tasterBetaetigung = 3;
 }
 
 // ############## ABFRAGEN DES DIGITALEN SENSORS ############################
@@ -623,12 +636,12 @@ int analogeSensoren(int pin) {
 	return 1;
 }
 
-void verlaufArrayVorschieben() {
+int verlaufArrayVorschieben() {
 	for (uint8_t historieEbene = 0; historieEbene < historischeWerteAnzahl; historieEbene++) {
 		for (uint8_t einzelnerSensor = 0; einzelnerSensor < 3; einzelnerSensor++) {
 			if (((timer1Sek - letzteAbrufzeit[einzelnerSensor][2]) < abstandHistorie)
 				|| (letzteAbrufzeit[einzelnerSensor][1] > wetterSensor[0][einzelnerSensor][1])) {
-				return;
+				return -99;
 			}
 			for (uint8_t werteSensor = 0; werteSensor < 4; werteSensor++) {
 				wetterSensor[historieEbene + 1][einzelnerSensor][werteSensor] = wetterSensor[historieEbene][einzelnerSensor][werteSensor];
@@ -647,14 +660,35 @@ void verlaufArrayVorschieben() {
 #endif	
 		}
 	}
+ return 1;
+}
+
+void sensorNameFestlegen(){
+  sensorBezeichnung = "Default";
+  switch (anzeigeSensor){
+    case 0:
+      sensorBezeichnung = "Flur";
+      break;
+    case 1:
+      sensorBezeichnung = "aussen";
+      break;
+    case 2:
+      sensorBezeichnung = "Keller";
+      break;
+    default:
+      sensorBezeichnung = "unbek.";
+      break;
+  }
 }
 
 void aktuelleWerteAnzeigen(int displayBreite, int displayHoehe) {
+  sensorNameFestlegen();
+    
 	if (displayHoehe < 1 || displayBreite < 15) {
-#ifdef DEBUG
-		Serial.print("\n Das definierte Display ist zu klein.");
-#endif  
-		return;
+  #ifdef DEBUG
+  		Serial.print("\n Das definierte Display ist zu klein.");
+  #endif  
+  return;
 	}
 	lcd.clear();
 	lcd.setCursor(0, displayHoehe - 1);
@@ -669,51 +703,54 @@ void aktuelleWerteAnzeigen(int displayBreite, int displayHoehe) {
 
 	if (displayHoehe > 1) {
 		lcd.setCursor(0, 0);
-		lcd.print("Sensor: ");
-		lcd.print(wetterSensor[0][anzeigeSensor][0]);
+		lcd.print(sensorBezeichnung);
 	}
 }
 
 
-void prozentBalkenZeigen(String bezeichnung, double geanderterWertAbsolut, double geanderterWertProzentual, int maxCharZeichen)
+void prozentBalkenZeigen(String bezeichnung, double geanderterWertProzentual, int maxCharZeichen)
 {
-	lcd.clear();
-	lcd.setCursor(0, 0);
-	lcd.print(bezeichnung);
-	lcd.setCursor(10, 0);
-	lcd.print(geanderterWertAbsolut);
+  sensorNameFestlegen();
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print(bezeichnung);
+  lcd.setCursor(maxCharZeichen-8, 0);
+  lcd.write(deltaChar);
+  lcd.write(tropfenChar);
+  lcd.print(geanderterWertProzentual);
+  lcd.write(prozentChar);
 
-	int xKoordinate = maxCharZeichen * 0.5;
-	int yKoordinate = 1;
-	double prozentInGanzeKaestchen = maxCharZeichen / 100.0 * geanderterWertProzentual* 0.5;
+  int xKoordinate = maxCharZeichen * 0.5;
+  int yKoordinate = 1;
+  double prozentInGanzeKaestchen = maxCharZeichen / 100.0 * geanderterWertProzentual* 0.5;
 
-	// positive Wertänderung verarbeiten
-	if (prozentInGanzeKaestchen > 0)
-	{
-		for (int i = 0; i < prozentInGanzeKaestchen; i++)
-		{
-			lcd.setCursor(xKoordinate - 1 + i, yKoordinate);
-			lcd.write(255);
-		}
+  // positive Wertänderung verarbeiten
+  if (prozentInGanzeKaestchen > 0)
+  {
+    for (int i = 0; i < prozentInGanzeKaestchen; i++)
+    {
+      lcd.setCursor(xKoordinate - 1 + i, yKoordinate);
+      lcd.write(255);
+    }
 
-		//Änderungspfeil anzeigen
-		lcd.setCursor(xKoordinate + 1 + prozentInGanzeKaestchen, yKoordinate);
-		lcd.write(126);
-	}
+    //Änderungspfeil anzeigen
+    lcd.setCursor(xKoordinate + 1 + prozentInGanzeKaestchen, yKoordinate);
+    lcd.write(126);
+  }
 
-	// negative Wertänderung verarbeiten
-	if (prozentInGanzeKaestchen < 0)
-	{
-		for (int i = 0; i > prozentInGanzeKaestchen; i--)
-		{
-			lcd.setCursor(xKoordinate - 1 + i, yKoordinate);
-			lcd.write(255);
-		}
+  // negative Wertänderung verarbeiten
+  if (prozentInGanzeKaestchen < 0)
+  {
+    for (int i = 0; i > prozentInGanzeKaestchen; i--)
+    {
+      lcd.setCursor(xKoordinate - 1 + i, yKoordinate);
+      lcd.write(255);
+    }
 
-		//Änderungspfeil anzeigen
-		lcd.setCursor(xKoordinate - 1 + prozentInGanzeKaestchen, yKoordinate);
-		lcd.write(127);
-	}
+    //Änderungspfeil anzeigen
+    lcd.setCursor(xKoordinate - 1 + prozentInGanzeKaestchen, yKoordinate);
+    lcd.write(127);
+  }
 }
 
 //LED schneller blinken lassen zwischen 60% und 100% Luftfeuchte
