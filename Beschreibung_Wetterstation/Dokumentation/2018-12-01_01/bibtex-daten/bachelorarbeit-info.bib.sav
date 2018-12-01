@@ -1,0 +1,363 @@
+% Encoding: windows-1252
+
+
+@Book{Siegert200612,
+  Title                    = {Betriebssysteme},
+  Author                   = {Hans-Jürgen Siegert},
+  Publisher                = {Oldenbourg Wissensch.Vlg},
+  Year                     = {2006},
+  Month                    = {12},
+
+  ISBN                     = {9783486582116},
+  Timestamp                = {2014.01.10},
+  Url                      = {http://amazon.com/o/ASIN/3486582119/}
+}
+
+@Misc{tauVonKendall_OnlineTool,
+  author       = {Patrick Wessa},
+  title        = {:: Kendall tau Rank Correlation - Free Statistics Software (Calculator) ::},
+  howpublished = {Internetseite},
+  year         = {2018},
+  note         = {[Online; Stand 16. August 2018]},
+  timestamp    = {2018-08-16},
+  url          = {https://www.wessa.net/rwasp_kendall.wasp},
+}
+
+@Book{statistikBuch_2005,
+  title     = {Lehr und Handbuch der angewandten Statistik},
+  publisher = {R. Oldenburgverlag München},
+  year      = {2005},
+  author    = {Dr. Joachim Hartung, Dr. Bärbel Elpelt, Dr. Karl-Heinz Klösener},
+  edition   = {14. Auflage},
+  isbn      = {3-486-57890-1},
+  timestamp = {2018-08-17},
+}
+
+@Misc{googleTrendZitat,
+  author    = {Google Inc.},
+  title     = {NativeScript, React Native, Flutter, Xamarin - Erkunden - Google Trends},
+  year      = {2018},
+  note      = {[Online; Stand 16. August 2018]},
+  timestamp = {2018-08-16},
+  url       = {https://trends.google.de/trends/explore?q=NativeScript,React%20Native,Flutter,Xamarin},
+}
+
+@Misc{tauVonKendallYoutube2,
+  author       = {how2stats},
+  title        = {Kendall's tau - Explained Simply + Examples (part 2)},
+  howpublished = {Video - Youtube},
+  year         = {2018},
+  note         = {[Online; Stand 16. August 2018]},
+  timestamp    = {2018-08-16},
+  url          = {https://www.youtube.com/watch?v=V4MgE43SrgM},
+}
+
+@Misc{tauVonKendallYoutube1,
+  author       = {how2stats},
+  title        = {Kendall's tau - Explained Simply + Examples (part 1)},
+  howpublished = {Video - Youtube},
+  year         = {2018},
+  note         = {[Online; Stand 16. August 2018]},
+  timestamp    = {2018-08-16},
+  url          = {https://www.youtube.com/watch?v=oXVxaSoY94k},
+}
+
+@Misc{devExtremeDepricated,
+  author       = {Mehul Harry (DevExpress) Web Program Manager},
+  title        = {DevExtreme Hybrid Mobile Tools Deprecation in v18.1},
+  howpublished = {Online Artikel},
+  year         = {2018},
+  note         = {[Online; Stand 17. August 2018]},
+  timestamp    = {2018-08-17},
+  url          = {https://community.devexpress.com/blogs/aspnet/archive/2018/02/26/devextreme-hybrid-mobile-tools-deprecation-in-v18-1.aspx},
+}
+
+@Book{nativeScirpptBook_2018,
+  title     = {The NativeScript Book building mobile apps with skills you already have},
+  year      = {2018},
+  author    = {Mike Branstein, Nick Branstein},
+  note      = {verwendete Seiten: 6 - 7},
+  timestamp = {2018-08-17},
+}
+
+@Misc{technologischesAusrollen,
+  title        = {React Native vs Flutter},
+  howpublished = {Youtube Video},
+  year         = {2018},
+  note         = {[Online; Stand 17. August 2018]},
+  timestamp    = {2018-08-17},
+  url          = {https://www.youtube.com/watch?v=bnYJRYFsrSw},
+}
+
+@Misc{entwicklerReactNative,
+  title        = {Which is better: React Native or Native Script?},
+  howpublished = {Online Forum},
+  year         = {2018},
+  note         = {[Online; Stand 17. August 2018]},
+  timestamp    = {2018-08-17},
+  url          = {https://www.quora.com/Which-is-better-React-Native-or-Native-Script},
+}
+
+@Misc{entwicklerFlutter,
+  author       = {Google Inc.},
+  title        = {Build beautiful native apps in record time},
+  howpublished = {offizielle Seite von Flutter},
+  year         = {2018},
+  note         = {[Online; Stand 17. August 2018]},
+  timestamp    = {2018-08-17},
+  url          = {https://flutter.io/},
+}
+
+@Misc{historyReactNative,
+  title        = {A brief history of React Native},
+  howpublished = {Internetseite},
+  year         = {2018},
+  note         = {[Online; Stand 17. August 2018]},
+  timestamp    = {2018-08-17},
+  url          = {https://medium.com/react-native-development/a-brief-history-of-react-native-aae11f4ca39},
+}
+
+@Misc{historyFlutter,
+  title        = {Flutter (software)},
+  howpublished = {Wikipedia},
+  year         = {2018},
+  note         = {[Online; Stand 17. August 2018]},
+  timestamp    = {2018-08-17},
+  url          = {https://en.wikipedia.org/wiki/Flutter_(software)},
+}
+
+@Misc{historyNativeScript,
+  title        = {NativeScript},
+  howpublished = {Wikipedia},
+  year         = {2018},
+  note         = {[Online; Stand 17. August 2018]},
+  timestamp    = {2018-08-17},
+  url          = {https://en.wikipedia.org/wiki/NativeScript},
+}
+
+@Misc{changelogNativeScript,
+  title        = {Cross Platform Modules Changelog},
+  howpublished = {Github},
+  year         = {2018},
+  note         = {[Online; Stand 17. August 2018]},
+  timestamp    = {2018-08-17},
+  url          = {https://github.com/NativeScript/NativeScript/blob/master/CHANGELOG.md},
+}
+
+@Misc{changelogReactNative,
+  title        = {react-native-community/react-native-releases},
+  howpublished = {Github},
+  year         = {2018},
+  note         = {[Online; Stand 17. August 2018]},
+  timestamp    = {2018-08-17},
+  url          = {https://github.com/react-native-community/react-native-releases/blob/master/CHANGELOG.md},
+}
+
+@Misc{nativeScriptLicence,
+  title        = {How is NativeScript Licensed?},
+  howpublished = {offizielle NativeScript Seite},
+  year         = {2018},
+  note         = {[Online; Stand 17. August 2018]},
+  timestamp    = {2018-08-17},
+  url          = {https://www.nativescript.org/faq/how-is-nativescript-licensed},
+}
+
+@Misc{changelogFlutter,
+  title        = {flutter/flutter},
+  howpublished = {Github},
+  year         = {2018},
+  note         = {[Online; Stand 17. August 2018]},
+  timestamp    = {2018-08-17},
+  url          = {https://github.com/flutter/flutter/wiki/Changelog},
+}
+
+@Misc{flutterLicense,
+  title        = {flutter/LICENSE},
+  howpublished = {Github},
+  year         = {2018},
+  note         = {[Online; Stand 17. August 2018]},
+  timestamp    = {2018-08-17},
+  url          = {https://github.com/flutter/flutter/blob/master/LICENSE},
+}
+
+@Misc{reactNativeLicence,
+  title        = {facebook/react-native},
+  howpublished = {Github},
+  year         = {2018},
+  note         = {[Online; Stand 17. August 2018]},
+  timestamp    = {2018-08-17},
+  url          = {https://github.com/facebook/react-native/blob/master/LICENSE},
+}
+
+@Misc{flutterZuwachs,
+  author       = {Tim Sneath - Product Manager for Flutter},
+  title        = {Announcing Flutter Release Preview 1},
+  howpublished = {Online Artikel},
+  year         = {2018},
+  note         = {[Online; Stand 17. August 2018]},
+  timestamp    = {2018-08-17},
+  url          = {https://medium.com/flutter-io/flutter-release-preview-1-943a9b6ee65a},
+}
+
+@Misc{showcaseFlutter,
+  author       = {Google},
+  title        = {Showcase},
+  howpublished = {Internetseite},
+  year         = {2018},
+  note         = {[Online; Stand 17. August 2018]},
+  timestamp    = {2018-08-17},
+  url          = {https://flutter.io/showcase/},
+}
+
+@Misc{flutterProduktivitaet,
+  author       = {Franz Silva},
+  title        = {Why Flutter? and not framework X?},
+  howpublished = {Online Artikel},
+  year         = {2018},
+  note         = {[Online; Stand 17. August 2018]},
+  timestamp    = {2018-08-17},
+  url          = {https://medium.com/@franzsilva/why-flutter-and-not-framework-x-or-better-yet-why-im-going-flutter-all-in-b484ecb25336},
+}
+
+@Misc{showcaseReactNative,
+  author       = {Facebook},
+  title        = {React Native Showcase},
+  howpublished = {Internetseite},
+  year         = {2018},
+  note         = {[Online; Stand 17. August 2018]},
+  timestamp    = {2018-08-17},
+  url          = {https://www.decoide.org/showcase/all},
+}
+
+@Misc{flutterHalloWeltApp,
+  author       = {G},
+  title        = {flutter/flutter},
+  howpublished = {Github},
+  year         = {2018},
+  note         = {[Online; Stand 17. August 2018]},
+  timestamp    = {2018-08-27},
+  url          = {https://github.com/flutter/flutter},
+}
+
+@Misc{showcaseNativeScript,
+  author       = {Telerik},
+  title        = {Showcases},
+  howpublished = {Internetseite},
+  year         = {2018},
+  note         = {[Online; Stand 17. August 2018]},
+  timestamp    = {2018-08-17},
+  url          = {https://www.nativescript.org/showcases/page/3
+},
+}
+
+@Misc{zusammenfassungVierTechnologiearten,
+  author       = {Michael Gogins},
+  title        = {Can anyone summarize the difference between native, hybrid, cross compiled and JIT compiled apps?},
+  howpublished = {Quora},
+  year         = {2018},
+  note         = {[Online; Stand 20. August 2018]},
+  timestamp    = {2018-08-20},
+  url          = {https://www.quora.com/Can-anyone-summarize-the-difference-between-native-hybrid-cross-compiled-and-JIT-compiled-apps
+},
+}
+
+@Misc{schulungFlutter,
+  author       = {Google Inc.},
+  title        = {Build Native Mobile Apps with Flutter by Google},
+  howpublished = {Internetseite},
+  year         = {2018},
+  note         = {[Online; Stand 20. August 2018]},
+  timestamp    = {2018-08-20},
+  url          = {https://www.udacity.com/course/build-native-mobile-apps-with-flutter--ud905
+},
+}
+
+@Misc{youtubeTutorialNativeScript,
+  author       = {falafelsoftware},
+  title        = {NativeScript - Hello my Name is},
+  howpublished = {Youtubevideo},
+  year         = {2018},
+  note         = {[Online; Stand 21. August 2018]},
+  timestamp    = {2018-08-21},
+  url          = {https://www.youtube.com/watch?v=LVGJ8q4vehs
+},
+}
+
+@Misc{reactNativeYoutubeTutorial,
+  author       = {Academind},
+  title        = {React Native Tutorial for Beginners - Getting Started},
+  howpublished = {Youtubevideo},
+  year         = {2018},
+  note         = {[Online; Stand 21. August 2018]},
+  timestamp    = {2018-08-21},
+  url          = {https://www.youtube.com/watch?v=6ZnfsJ6mM5c
+},
+}
+
+@Misc{nativeScriptGettingStartetOfficial,
+  author       = {Telerik},
+  title        = {Set Up Your System},
+  howpublished = {offizielle Anleitung},
+  year         = {2018},
+  note         = {[Online; Stand 21. August 2018]},
+  timestamp    = {2018-08-21},
+  url          = {https://docs.nativescript.org/start/quick-setup
+},
+}
+
+@Misc{flutterOfficialGettingStartet,
+  author       = {Google Inc.},
+  title        = {Get Startet: Overview},
+  howpublished = {offizielle Anleitung},
+  year         = {2018},
+  note         = {[Online; Stand 21. August 2018]},
+  timestamp    = {2018-08-21},
+  url          = {https://flutter.io/get-started/
+},
+}
+
+@Misc{reactNativeStarterOfficial,
+  author       = {Facebook},
+  title        = {Getting Startet},
+  howpublished = {offizielle Anleitung},
+  year         = {2018},
+  note         = {[Online; Stand 21. August 2018]},
+  timestamp    = {2018-08-21},
+  url          = {https://facebook.github.io/react-native/docs/getting-started.html
+},
+}
+
+@Misc{suchmaschinenumsatz2018,
+  author       = {statista.com},
+  title        = {Suchmaschinenwerbung},
+  howpublished = {Diagramm},
+  year         = {2018},
+  note         = {[Online; Stand 27. August 2018]},
+  timestamp    = {2018-08-27},
+  url          = {https://de.statista.com/outlook/219/100/suchmaschinenwerbung/weltweit
+},
+}
+
+@Misc{integrierbarkeitPluginsInEntwicklungsumgebung,
+  author       = {alternativeto.net},
+  title        = {Alternatives to IntelliJ IDEA for all platforms with any license},
+  howpublished = {online Artikel},
+  year         = {2018},
+  note         = {[Online; Stand 23. August 2018]},
+  timestamp    = {2018-08-23},
+  url          = {https://alternativeto.net/software/intellij-idea/
+},
+}
+
+@Misc{suchmaschinenmarktanteile,
+  author       = {luna-park},
+  title        = {Suchmaschinenmarktanteile weltweit 2017},
+  howpublished = {Diagramm},
+  year         = {2018},
+  note         = {[Online; Stand 27. August 2018]},
+  timestamp    = {2018-08-27},
+  url          = {https://www.luna-park.de/blog/9907-suchmaschinen-marktanteile-weltweit-2014/
+},
+}
+
+@Comment{jabref-meta: databaseType:bibtex;}

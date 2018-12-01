@@ -1,0 +1,1189 @@
+%% LyX 2.3.0 created this file.  For more info, see http://www.lyx.org/.
+%% Do not edit unless you really know what you are doing.
+\documentclass[12pt,ngerman,pointlessnumbers, abstracton, headsepline]{scrreprt}
+\renewcommand{\familydefault}{\sfdefault}
+\usepackage[T1]{fontenc}
+\usepackage[latin9]{inputenc}
+\usepackage{geometry}
+\geometry{verbose,tmargin=2cm,bmargin=2cm,lmargin=3cm,rmargin=2cm,footskip=1cm}
+\pagestyle{plain}
+\setlength{\parskip}{\medskipamount}
+\setlength{\parindent}{0pt}
+\usepackage{color}
+\usepackage{babel}
+\usepackage{array}
+\usepackage{varioref}
+\usepackage{rotfloat}
+\usepackage{textcomp}
+\usepackage{multirow}
+\usepackage{tablefootnote}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{graphicx}
+\usepackage{setspace}
+\usepackage{nomencl}
+% the following is useful when we have the old nomencl.sty package
+\providecommand{\printnomenclature}{\printglossary}
+\providecommand{\makenomenclature}{\makeglossary}
+\makenomenclature
+\usepackage{microtype}
+\setstretch{1.2}
+
+\makeatletter
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% LyX specific LaTeX commands.
+%% Because html converters don't know tabularnewline
+\providecommand{\tabularnewline}{\\}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% User specified LaTeX commands.
+% verschieden Symbole, Zeichen wie (c), ¤
+\usepackage{textcomp,units}
+
+% Mehr Platz zwischen Tabelle und Untertitel
+\usepackage{caption}
+\captionsetup[table]{skip=10pt}
+
+%Kapitelzahl sehr groß
+\makeatletter% siehe De-TeX-FAQ 
+ \renewcommand*{\chapterformat}{% 
+   \begingroup% damit \unitlength-Änderung lokal bleibt 
+     \setlength{\unitlength}{1mm}% 
+     \begin{picture}(10,10)(0,5) 
+       \setlength{\fboxsep}{0pt} 
+       %\put(0,0){\framebox(20,40){}}% 
+       %\put(0,20){\makebox(20,20){\rule{20\unitlength}{20\unitlength}}}% 
+       \put(10,15){\line(1,0){\dimexpr 
+           \textwidth-20\unitlength\relax\@gobble}}% 
+       \put(0,0){\makebox(10,20)[r]{% 
+           \fontsize{28\unitlength}{28\unitlength}\selectfont\thechapter 
+           \kern-.05em% Ziffer in der Zeichenzelle nach rechts schieben 
+         }}% 
+       \put(10,15){\makebox(\dimexpr 
+           \textwidth-20\unitlength\relax\@gobble,\ht\strutbox\@gobble)[l]{% 
+             \ \normalsize\color{black}\chapapp~\thechapter\autodot 
+           }}% 
+     \end{picture} % <-- Leerzeichen ist hier beabsichtigt! 
+   \endgroup 
+}
+
+\usepackage{ %a4wide,
+            ellipsis, fixltx2e, mparhack,   %Fehlerkorrektur für Marginalien
+            booktabs, longtable             %schönere Tabellen
+}  
+
+\usepackage[automark]{scrpage2}
+%\automark[chapter]{chapter}
+\clearscrheadfoot
+\ohead{\\\headmark}
+\ihead{\includegraphics[scale=0.15]{logo.jpg}}%\pagemark}
+\ofoot[\pagemark]{\pagemark}
+
+
+%Kurzfassung und Abstract (englisch) auf eine Seite
+\renewenvironment{abstract}{
+    \@beginparpenalty\@lowpenalty
+      \begin{center}
+        \normalfont\sectfont\nobreak\abstractname
+        \@endparpenalty\@M
+      \end{center}
+}{
+    \par
+}
+
+
+
+% schönerer Blocksatz!!
+
+\usepackage{ifpdf} % part of the hyperref bundle
+\ifpdf % if pdflatex is used
+
+%set fonts for nicer pdf view
+ \IfFileExists{lmodern.sty}{\usepackage{lmodern}}
+  {\usepackage[scaled=0.92]{helvet}
+    \usepackage{mathptmx}
+    \usepackage{courier} }
+\fi
+
+ % the pages of the TOC are numbered roman
+ % and a pdf-bookmark for the TOC is added
+ \pagenumbering{roman}
+ \let\myTOC\tableofcontents
+ \renewcommand\tableofcontents{
+   %\pdfbookmark[1]{Contents}{}
+   \myTOC
+   \clearpage
+   \pagenumbering{arabic}}
+
+%Bezeichungen anpassen
+%Babelpaket muß zuvor geladen werden
+%\usepackage[ngerman]{babel}
+\addto\captionsngerman{ 
+\renewcommand{\figurename}{Abb.}% 
+\renewcommand{\tablename}{Tab.}% 
+\renewcommand{\abstractname}{Kurzfassung}
+%\renewcommand{\nomname}{Abkürzungen}
+}
+
+% Alle Querverweise und URLs als Link darstellen
+% In der PDF-Ausgabe
+ \usepackage[colorlinks=true, bookmarks, bookmarksnumbered, bookmarksopen, bookmarksopenlevel=1,
+  linkcolor=black, citecolor=black, urlcolor=blue, filecolor=blue,
+  pdfpagelayout=OneColumn, pdfnewwindow=true,
+  pdfstartview=XYZ, plainpages=false, pdfpagelabels,
+  pdfauthor={LyX Team}, pdftex,
+  pdftitle={LyX's Figure, Table, Floats, Notes, and Boxes manual},
+  pdfsubject={LyX-documentation about figures, tables, floats, notes, and boxes},
+  pdfkeywords={LyX, Tables, Figures, Floats, Boxes, Notes}]{hyperref}
+
+%mehr Platz zwischen Überschrift und Tabelle
+\newcommand{\@ldtable}{}
+\let\@ldtable\table
+\renewcommand{\table}{ %
+                 \setlength{\@tempdima}{\abovecaptionskip} %
+                 \setlength{\abovecaptionskip}{\belowcaptionskip} %
+                 \setlength{\belowcaptionskip}{\@tempdima} %
+                 \@ldtable}
+
+%In dieser Arbeit wird auf die Nomenklatur als Abkürzungsverzeichnis verzichtet. Bei Wunsch wieder aktivieren.
+%Nomenklatur als Abkürzungsverzeichnis verwenden
+%\renewcommand{\nomname}{Abkürzungsverzeichnis}
+%\renewcommand{\nomlabelwidth}{20mm}
+
+%Nomenklatur als Glossar verwenden
+%Nur Noetig wenn auch Glossar verwendet wird.
+\renewcommand{\nomname}{Glossar}
+
+%Farbe für Programmcode festlegen
+\definecolor{lightgray}{rgb}{0.8,0.8,0.8}
+
+\AtBeginDocument{
+  \def\labelitemiii{\(\circ\)}
+}
+
+\makeatother
+
+\usepackage{listings}
+\def\eqdeclaration#1{, siehe Gleichung\nobreakspace(#1)}
+\def\pagedeclaration#1{, Seite\nobreakspace#1}
+\def\nomname{Nomenklatur}
+\renewcommand{\lstlistingname}{Listing}
+
+\begin{document}
+\titlepage
+
+\begin{center}
+\begin{tabular}{cc}
+ & \multirow{5}{*}{\includegraphics[width=5cm]{images/ba_logo}}\tabularnewline
+Informationstechnologie / Informationstechnik\hspace{2.5cm} & \tabularnewline
+ & \tabularnewline
+ & \tabularnewline
+ & \tabularnewline
+\end{tabular}
+\par\end{center}
+
+\vspace{4cm}
+
+\begin{flushleft}
+\textbf{\Large{}Praxistransferbeleg}{\Large\par}
+\par\end{flushleft}
+
+\begin{flushleft}
+{\large{}Thema: Entwicklung einer mobilen Cross -- platform und /
+oder Hybrid App zur Erfassung von Zählerständen}{\large\par}
+\par\end{flushleft}
+
+\begin{flushleft}
+{\Large{}\vspace{1.5cm}
+}{\Large\par}
+\par\end{flushleft}
+
+\begin{tabular}{ll}
+eingereicht von:\hspace{1cm} & Henning Nußbaum\tabularnewline
+ & Matrikelnummer: 3002710\tabularnewline
+ & Studiengang: Informationstechnik\tabularnewline
+ & Berufsakademie Sachsen\tabularnewline
+ & Staatliche Studienakademie Dresden\tabularnewline
+ & Studiengang: Informationstechnik\tabularnewline
+ & \tabularnewline
+betreut durch: & Dipl. Ing. Jörn Stange\tabularnewline
+ & Facilityport GmbH\tabularnewline
+ & Dipl. Ing. (FH) Christoph Straube\tabularnewline
+ & Facilityport GmbH\tabularnewline
+ & \tabularnewline
+Praxisunternehmen: & Facilityport GmbH\tabularnewline
+ & Waisenhausstraße 8\tabularnewline
+ & 01067 Dresden\tabularnewline
+ & \tabularnewline
+Tag der Themübergabe: & 10.08.2018\tabularnewline
+Tag der Einreichung: & \today\tabularnewline
+\end{tabular}
+
+\begin{flushleft}
+\newpage{}
+\par\end{flushleft}
+
+~
+
+\vspace{17.1mm}
+
+\begin{flushleft}
+\textbf{\huge{}Auftragsblatt}{\huge\par}
+\par\end{flushleft}
+\begin{itemize}
+\item Auswahl einer oder zwei geeigneter Technologie(n) zur Erstellung der
+App 
+\item Erstellung der App mit der gewählten / den gewählten Technologien
+Anforderungen an die App: \\
+- App muss lauffähig unter iOS \& Android sein\\
+- App muss über Play Store und App Store vertrieben werden können\\
+- folgende Features sollen realisiert werden: Eingabe eines Zählerstandes
+und einer Zählernummer, Erfassen eines Fotos des Zählerstandes mit
+der Kamera des Gerätes, Generierung einer pdf -- Datei des Protokolls
+auf dem Gerät, Zugriff auf die pdf -- Datei durch eine weitere App
+\item Dokumentation folgender Punkte innerhalb des Praxistransferbeleges\\
+- Begründung für die gewählte(n) Technologie(n)\\
+- Dokumentation der Erstellung des Softwareprozesses (50\% -- 70\%
+der Arbeit)\\
+- Beurteilung zur Eignung der gewählten Technologie / der gewählten
+Technologien für die geforderte Aufgabe 
+\end{itemize}
+\vspace{2cm}
+
+\newpage{}
+
+~
+
+\vspace{17.1mm}
+
+\begin{flushleft}
+\textbf{\huge{}Sperrvermerk}{\huge\par}
+\par\end{flushleft}
+
+Die vorliegende Arbeit enthält vertrauliche Daten des Unternehmens
+Facilityport GmbH. Auf Wunsch des Unternehmens Facilityport GmbH ist
+die vorliegende Arbeit für die öffentliche Nutzung zu sperren. Veröffentlichung,
+Vervielfältigung und Einsichtnahme sind ohne ausdrückliche Genehmigung
+des Unternehmens Facilityport GmbH, in 01067 Dresden und des Verfassers
+Henning Nußbaum nicht gestattet. Die Arbeit ist nur den Gutachtern
+und den Mitgliedern des Prüfungsausschusses zugänglich zu machen.
+Ort, Datum Unterschrift der (des) Verfasser(s)
+\begin{center}
+\begin{tabular*}{15cm}{@{\extracolsep{\fill}}cl}
+Dresden, der \today & \tabularnewline
+ & Henning Nußbaum\tabularnewline
+\end{tabular*}
+\par\end{center}
+
+\newpage{}
+
+\tableofcontents{}
+
+\newpage{}
+
+\pagenumbering{roman}
+\setcounter{page}{7}
+
+\listoffigures
+
+\newpage{}
+
+\nomenclature{APT}{Advanced Packaging Tool (kurz. APT) ist ein Paketverwaltungssystem das z.B. bei Debian und Ubuntu eingesetzt wird. Das Paketverwaltungssystem stellt einen Großteil der für das Betriebssystem verfügbaren Programme und Erweiterungen bereit. Diese können durch den Benutzer meist in der Befehlszeile oder über eine grafische Oberfläche installiert und konfiguriert werden. }\nomenclature{API}{Application Programming Interface (kurz API) ist eine Programmierschnittstelle die eine Anbindung von Außen an ein bestehendes System bietet. Die Schnittstelle wird vom Hersteller der Software zur Verfügung gestellt um Dritten die Möglichkeit eines Addons oder einer Erweiterung zu geben. Die Schnittstelle definiert dabei ein Standardformat und Standardbefehle.}
+
+\settowidth{\nomlabelwidth}{APT}
+\printnomenclature{}
+
+\newpage{}
+
+\listoftables
+
+\newpage{}
+
+\pagenumbering{arabic}
+
+\chapter{Hintegrund der Arbeit}
+
+\section{Bisheriger firmeninterner Stand}
+
+Die Firma Facilityport GmbH entwickelt mobile Apps im Bereich der
+Immobilienverwaltung. Beispielsweise wurde eine App zur Erfassung
+von Zählerständen ,,eZaehler`` und eine App zur Protokollgenerierung
+von von Ein- und Auszügen ,,eTAB`` erstellt. Technologisch umgesetzt
+sind die beiden bisherigen Apps als mobile Webseite mit JavaScript.
+Für ein geeignetes User Interface (UI) \nomenclature{UI}{UI - steht für User Interface. Damit wird ausgedrückt, dass es sich um sichtbare Elemente einer Anwedung handelt.}
+und wurde DevExtreme, ein UI - Framework genutzt. KnockoutJS wurde
+als Framework zur Verbindung der Schnittstelle zwischen UI und App
+Logik verwendet, da es das Konzept MVVM (Model View ViewModel) ermöglicht
+
+Die Web-App wird mit Cordova / PhoneGap in einem nativen Web View
+sichtbar. Dieses Verfahern wird ,,hybrid App`` genannt. Der Nutzer
+erhält dadurch eine lauffähige App, die wie eine native App verwendbar
+ist.\cite{nativeScirpptBook_2018}
+
+\section{Anlass und Aktualität des Themas\label{sec:Relevanz-der-Arbeit}}
+
+Das Ausrollen von Apps auf unterschiedlichen Plattformen mit ähnlicher
+oder gleicher Codbasis gewinnt immer mehr an Relevanz. Belegt werden
+kann die These durch stetig wachsende Anzahl neuer Videos, beispielsweise
+auf Videoplattformen, wie beispielsweise Youtube.
+
+Es bestehen primär vier Gründe, die eine Umstellung der bestehenden
+App's auf ein anderes Konzept rechtfertigen:
+\begin{enumerate}
+\item Das verwendete DevExtreme Framework wird die Verwendung von Cordova
+/ PhoneGap in zukünftigen DevExtreme - Versionen nicht mehr unterstützen.\cite{devExtremeDepricated}
+\item In der App ,,eTAB`` werden pdf - Protokolle generiert und via E-Mail
+verschickt. Bisher ist die Generierung der pdf - Protokolle nur serverseitig
+möglich, was eine Internetverbindung der Geräte erfordert. Ein Kundenwunsch
+ist es, die pdf - Protokolle offline auf Client - Seite zu generieren.
+Da die Umsetzung größere Änderungen an der App erfordern würde, soll
+dieser Kundenwunsch in einer technisch besser konzeptionierten ,,eTAB``
+Version umgesetzt werden.
+\item In der bisherigen ,,eTAB`` Version wurde kein objektorientierter
+Ansatz verwendet. Ein objektorientierter Ansatz würde zukünftige Wartungsarbeiten
+an der App reduzieren.
+\item Die bisherige App Logik und die Realisierung mit Cordova / PhoneGap
+verlangsamt die App, da von der Applikation viel Quellcode verarbeitet
+werden muss und Hybrid - Apps langsamer sind als nativ kompilierte
+Apps.\cite{technologischesAusrollen}
+\end{enumerate}
+Das Ziel der Arbeit ist es, geeignete alternative Technologien oder
+Kombinationen aus Technologien zu vergleichen, welche folgenden Mindestumfang
+unterstützten:
+\begin{itemize}
+\item Die App muss auf den Plattformen iOS \& Android ausgerollt werden
+können.
+\item Die App muss über Play Store und App Store vertrieben werden können
+\item Folgende Features müssen mit der gewählten Technologie umgesetzt werden
+können: Eingabe eines Textes in ein Textfeld, Erfassen eines Fotos
+mit der Kamera des Gerätes, Generierung einer pdf -- Datei offline
+auf dem Gerät, Zugriff auf die pdf -- Datei durch eine weitere App
+\end{itemize}
+
+\section{Inhalt der Arbeit}
+
+Die Arbeit beinhaltet einen Variantenvergleich für die unter Abschnitt
+\ref{sec:Relevanz-der-Arbeit} gezeigten Mindestanforderungen. Für
+eine der gezeigten Technologien wurde eine Demonstrations App umgesetzt,
+welche die Mindestanforderungen erfüllt.
+
+\chapter{Grundlegender technologischer Vergleich}
+
+\section{Mögliche Technologien}
+
+Um eine App nativ auf einem Gerät auszurollen, gibt es vier verschiedene
+Möglichkeiten der Realisierung:
+\begin{itemize}
+\item nativ
+\item hybrid
+\item cross compiled
+\item Jit compiled\cite{zusammenfassungVierTechnologiearten,nativeScirpptBook_2018}
+\end{itemize}
+
+\subsection{Native Umsetzung}
+
+Die Umsetzung als native App ermöglicht die maximal mögliche Geschwindigkeit
+der App und die höchstmögliche Kompatibilität auf Gerätefunktionen
+zuzugreifen. Der Quellcode muss für jede gewünschte Plattform einzeln
+geschrieben werden. Eine Widerverwendbarkeit bereits geschriebenen
+Quellcodes ist daher ausgeschlossen.
+
+Die Technologie scheidet für die Firma aus und wird in der vorliegenden
+Arbeit nicht weiter betrachtet.\cite{zusammenfassungVierTechnologiearten,nativeScirpptBook_2018}
+
+\subsection{Umsetzung als Hybrid App}
+
+Eine Hybrid App besteht aus einer Webseite, welche in einem Browser
+im Vollbildmodus gezeigt wird. Der Web Browser ist nicht als solcher
+zu erkennen. Der Quellcode wird in einem nativen Web View gehostet.\cite{zusammenfassungVierTechnologiearten,nativeScirpptBook_2018}
+
+\subsection{Umsetzung als cross compiled App}
+
+Eine ,,cross compiled`` App ist fast wie eine native App. Der Unterschied
+liegt darin, dass der Compiler auf einem Betriebssystem läuft und
+das Kompilieren der App für andere Zielsysteme trotzdem unterstützt.
+Daher kann die App in einer einzigen Programmiersprache, für mehrere
+Plattformen kompiliert und ausgerollt werden. Eine Widerverwendbarkeit
+des Quellcodes ist daher möglich.\cite{zusammenfassungVierTechnologiearten,nativeScirpptBook_2018}
+
+\subsection{Umsetzung als JIT compiled App}
+
+JIT compiled steht für ,,Just in Time``. 
+
+Eine virtuelle Maschine führt die App aus, welche mit einer dynamischen
+Sprache umgesetzt wurde. Dabei wird die Laufzeit überwacht und häufig
+ausgeführte Funktionen werden werden in native Maschinensprache kompiliert,
+was die Ausführung der App beschleunigt.\cite{zusammenfassungVierTechnologiearten,nativeScirpptBook_2018}
+
+\section{Gegenüberstellung der Technologien}
+
+Tabelle \vref{fig:vergleichTechnischeM=0000F6glichkeiten} zeigt die
+grundsätzlichen Vor- und Nachteile der vier möglichen Technologien.
+
+\begin{table}[h]
+\begin{centering}
+\begin{tabular}{|>{\raggedright}p{3cm}|>{\raggedright}p{4cm}|>{\raggedright}p{4cm}|}
+\hline 
+Eigenschaft & Performance & Wiederverwendbarkeit des Quellcodes\tabularnewline
+\hline 
+\hline 
+nativ & höchstmöglich & keine\tabularnewline
+\hline 
+hybrid & am geringsten & hoch\tablefootnote{Hybrid Apps ermöglichen die höchstmögliche Wiederverwendbarkeit von
+Quellcode durch den verwendeten Web - View. Der Web - View verlangsamt
+die App, weshalb diese Technologie in diesem Vergleich die langsamste
+ist.}\tabularnewline
+\hline 
+cross compiled & sehr hoch & mittel\tabularnewline
+\hline 
+JIT compiled & hoch\tablefootnote{Durch die Verwendung einer virtuellen Maschine ist der Quellcode langsamer,
+als bei einer ,,cross compiled`` App. } & mittel\tabularnewline
+\hline 
+\end{tabular}
+\par\end{centering}
+\caption[Vergleich der technischen Möglichkeiten]{Vergleich der technischen Möglichkeiten \label{fig:vergleichTechnischeM=0000F6glichkeiten}}
+\end{table}
+
+
+\chapter{Variantenvergleich}
+
+\section{Vorauswahl nach Popularität}
+
+Auf dem Markt werden viele Frameworks angeboten, die das Ausrollen
+von mobilen Applikationen auf mehreren Geräten realisieren sollen.
+Es erfolgte daher eine Vorauswahl nach der Popularität der Frameworks. 
+
+Dazu wurden folgende Frameworks ausgewählt:
+\begin{itemize}
+\item React Native,
+\item NativeScript,
+\item Xamarin und
+\item Flutter.
+\end{itemize}
+
+\subsection{Popularität nach Google Trends}
+
+Erstellt wurde ein grafischer Vergleich der weltweiten Popularität
+der Frameworks für den Zeitraum eines Jahres, siehe Abbildung \ref{fig:popularitaet_Google_Trends}.
+Die Abbildung wurde mit Daten von Google Trends erstellt, welche am
+16.08.2018 um 11.24 Uhr abgerufen wurden, siehe Tabelle \ref{fig:datenGoogleTrends_2017}
+und \ref{fig:datenGoogleTrends_2018}.\cite{googleTrendZitat}
+
+\begin{table}[h]
+\begin{centering}
+\begin{tabular}{|>{\raggedright}p{3.5cm}|>{\raggedright}p{2.4cm}|>{\raggedright}p{2.4cm}|>{\raggedright}p{2.4cm}|>{\raggedright}p{2.4cm}|}
+\hline 
+Zeit & React Native & Flutter & NativeScript & Xamarin\tabularnewline
+\hline 
+\hline 
+$KW33-2017$ & $69$ & $29$ & $5$ & $58$\tabularnewline
+\hline 
+$KW34-2017$ & $65$ & $27$ & $5$ & $60$\tabularnewline
+\hline 
+$KW35-2017$ & $63$ & $29$ & $5$ & $55$\tabularnewline
+\hline 
+$KW36-2017$ & $70$ & $28$ & $6$ & $61$\tabularnewline
+\hline 
+$KW37-2017$ & $70$ & $30$ & $5$ & $61$\tabularnewline
+\hline 
+$KW38-2017$ & $68$ & $30$ & $5$ & $61$\tabularnewline
+\hline 
+$KW39-2017$ & $66$ & $32$ & $5$ & $58$\tabularnewline
+\hline 
+$KW40-2017$ & $71$ & $31$ & $5$ & $62$\tabularnewline
+\hline 
+$KW41-2017$ & $71$ & $30$ & $5$ & $59$\tabularnewline
+\hline 
+$KW42-2017$ & $71$ & $29$ & $6$ & $58$\tabularnewline
+\hline 
+$KW43-2017$ & $72$ & $29$ & $5$ & $59$\tabularnewline
+\hline 
+$KW44-2017$ & $75$ & $30$ & $5$ & $59$\tabularnewline
+\hline 
+$KW45-2017$ & $75$ & $31$ & $6$ & $62$\tabularnewline
+\hline 
+$KW46-2017$ & $73$ & $27$ & $6$ & $59$\tabularnewline
+\hline 
+$KW47-2017$ & $72$ & $30$ & $6$ & $54$\tabularnewline
+\hline 
+$KW48-2017$ & $75$ & $31$ & $6$ & $60$\tabularnewline
+\hline 
+$KW49-2017$ & $76$ & $30$ & $6$ & $58$\tabularnewline
+\hline 
+$KW50-2017$ & $74$ & $29$ & $5$ & $54$\tabularnewline
+\hline 
+$KW51-2017$ & $61$ & $27$ & $5$ & $40$\tabularnewline
+\hline 
+$KW52-2017$ & $66$ & $29$ & $5$ & $43$\tabularnewline
+\hline 
+\end{tabular}
+\par\end{centering}
+\caption[Daten der weltweiten Popularität nach Google Trends]{Daten der weltweiten Popularität nach Google Trends - KW33 2017 bis
+KW52 2017\label{fig:datenGoogleTrends_2017}}
+\end{table}
+
+\begin{table}[h]
+\begin{centering}
+\begin{tabular}{|>{\raggedright}p{3.5cm}|>{\raggedright}p{2.4cm}|>{\raggedright}p{2.4cm}|>{\raggedright}p{2.4cm}|>{\raggedright}p{2.4cm}|}
+\hline 
+Zeit & React Native & Flutter & NativeScript & Xamarin\tabularnewline
+\hline 
+\hline 
+$KW01-2018$ & $77$ & $30$ & $6$ & $55$\tabularnewline
+\hline 
+$KW02-2018$ & $79$ & $31$ & $5$ & $53$\tabularnewline
+\hline 
+$KW03-2018$ & $77$ & $32$ & $6$ & $55$\tabularnewline
+\hline 
+$KW04-2018$ & $82$ & $31$ & $6$ & $54$\tabularnewline
+\hline 
+$KW05-2018$ & $81$ & $31$ & $6$ & $57$\tabularnewline
+\hline 
+$KW06-2018$ & $77$ & $31$ & $6$ & $56$\tabularnewline
+\hline 
+$KW07-2018$ & $81$ & $35$ & $7$ & $58$\tabularnewline
+\hline 
+$KW08-2018$ & $82$ & $63$ & $6$ & $55$\tabularnewline
+\hline 
+$KW09-2018$ & $84$ & $49$ & $6$ & $57$\tabularnewline
+\hline 
+$KW10-2018$ & $87$ & $45$ & $6$ & $56$\tabularnewline
+\hline 
+$KW11-2018$ & $92$ & $42$ & $5$ & $55$\tabularnewline
+\hline 
+$KW12-2018$ & $88$ & $44$ & $6$ & $53$\tabularnewline
+\hline 
+$KW13-2018$ & $91$ & $45$ & $6$ & $56$\tabularnewline
+\hline 
+$KW14-2018$ & $88$ & $43$ & $6$ & $52$\tabularnewline
+\hline 
+$KW15-2018$ & $87$ & $46$ & $6$ & $51$\tabularnewline
+\hline 
+$KW16-2018$ & $81$ & $46$ & $6$ & $49$\tabularnewline
+\hline 
+$KW17-2018$ & $88$ & $50$ & $6$ & $51$\tabularnewline
+\hline 
+$KW18-2018$ & $91$ & $48$ & $6$ & $51$\tabularnewline
+\hline 
+$KW19-2018$ & $91$ & $46$ & $5$ & $55$\tabularnewline
+\hline 
+$KW20-2018$ & $90$ & $46$ & $6$ & $48$\tabularnewline
+\hline 
+$KW21-2018$ & $92$ & $42$ & $5$ & $55$\tabularnewline
+\hline 
+$KW22-2018$ & $94$ & $47$ & $6$ & $58$\tabularnewline
+\hline 
+$KW23-2018$ & $95$ & $46$ & $7$ & $48$\tabularnewline
+\hline 
+$KW24-2018$ & $98$ & $52$ & $5$ & $48$\tabularnewline
+\hline 
+$KW25-2018$ & $99$ & $50$ & $7$ & $48$\tabularnewline
+\hline 
+$KW26-2018$ & $93$ & $49$ & $5$ & $47$\tabularnewline
+\hline 
+$KW27-2018$ & $100$ & $53$ & $6$ & $50$\tabularnewline
+\hline 
+$KW28-2018$ & $96$ & $54$ & $5$ & $50$\tabularnewline
+\hline 
+$KW29-2018$ & $95$ & $50$ & $5$ & $48$\tabularnewline
+\hline 
+$KW30-2018$ & $98$ & $52$ & $6$ & $50$\tabularnewline
+\hline 
+$KW31-2018$ & $97$ & $51$ & $6$ & $47$\tabularnewline
+\hline 
+\end{tabular}
+\par\end{centering}
+\caption[Daten der weltweiten Popularität nach Google Trends]{Daten der weltweiten Popularität nach Google Trends - KW33 2017 bis
+KW52 2017\label{fig:datenGoogleTrends_2018}}
+\end{table}
+
+Das bisherige Google Keyword Tool lieferte absoulte Suchanfragen für
+einen Begriff. Google hat diese Möglichkeit eingestellt und lässt
+es mit Google Trends nur noch zu, Suchbegriffe relativ zueinander
+zu vergleichen. Die Daten in den Tabellen \ref{fig:datenGoogleTrends_2017}
+und \ref{fig:datenGoogleTrends_2018} sind daher realtiv zueinander
+zu interpretieren.
+
+In diesem Vergleich wurden vier Frameworks ,,Flutter``, ,,React
+Native``, Xamarin und ,,NativeScript``, als Suchbegriffe in Google
+Trends miteinander verglichen.
+
+,,React Native`` hatte in $KW27-2018$ die meisten Suchanfragen.
+Dieser Wert wird von Google Trends als Normierung zur Erstellung aller
+anderen Werte genutzt. Alle anderen Werte werden durch die absoluten
+Suchanfragen von React Native in $KW27-2018$. Die normierten Werte
+der verglichenen Suchbegriffe sind in Google Trends abrufbar. \cite{googleTrendZitat}
+
+\begin{figure}[h]
+\begin{centering}
+\includegraphics[width=15cm]{images/popularitaetFrameWorksGoogleTrends}
+\par\end{centering}
+\caption[Weltweite Popularität der Frameworks nach Google Trends]{Weltweite Popularität der Frameworks React Native, Flutter, NativeScript
+und Xamarin nach Google Trends \label{fig:popularitaet_Google_Trends}}
+\end{figure}
+
+Anhand der von Google Trends bereitgestellten Daten wurde die Korrelation
+zwischen der weltweiten Popularität und der Zeit ermittelt, um daraus
+einen Rückschluss auf die zukünftige Beliebtheit des Frameworks ziehen
+zu können.
+
+Eine Korrelationsuntersuchung nach dem Tau von Kendall wurde gewählt,
+da die Untersuchung für geringe Datenmengen geeignet ist, da alle
+Ränge mit allen anderen verglichen werden. Das Tau von Kendall ist
+normiert von $-1\leq\tau\leq1$. \cite{statistikBuch_2005} Eine Anleitung
+zur Ermittlung des Tau von Kendalls zeigen die Quellen \cite{tauVonKendallYoutube1,tauVonKendallYoutube2}.
+
+Um die Arbeit zu vereinfachen, wurden die einzelnen Korrelationskoeffizienten
+mit dem bereitgestellten Tool aus Quelle \cite{tauVonKendall_OnlineTool}
+berechnet.
+
+Für die Korrelation zwischen der Beliebtheit der Frameworks und der
+Zeit wurden folgende Werte berechnet:
+\begin{itemize}
+\item Für NativeScript: $\tau_{NativeScript}=0,31$
+\item Für React Native: $\tau_{ReactNative}=0,81$
+\item Für Flutter: $\tau_{Flutter}=0,73$
+\item Für Xamarin: $\tau_{Xamarin}=-0,58$
+\end{itemize}
+Es ist zu sehen, dass für die drei Frameworks NativeScript, React
+Native und Flutter eine positive Korrelation zwischen der Popularität
+und der Zeit vorliegt, wobei das Framework React Native den größten
+Zuwachs zu verzeichnen hat. Xamarin weißt als einzigstes Framework
+eine negative Korrelation auf.
+
+Die statistische Signifikanz wird für das Tau von Kendall mit der
+Formel \ref{eq:signifikanzNiveauErmitteln} berechnet. Anhand der
+Formel ist zu sehen, dass die Signifikanz vom Stichprobenumfang $n$
+und dem Tau $\tau$ abhängt. Mit zunehmendem Stichprobenumfang reicht
+ein geringerer Wert für $\tau$ aus, um von statistischer Signifikanz
+ausgehen zu können. Nach derr Quelle \cite{tauVonKendallYoutube2}
+muss die statistische Signifikanz $Z$ dabei $>1.96$ sein.
+
+\begin{equation}
+|Z|=\frac{3\cdot\tau\cdot\sqrt{n\left(n-1\right)}}{\sqrt{2\cdot\left(2\cdot n+5\right)}}\label{eq:signifikanzNiveauErmitteln}
+\end{equation}
+
+Folgende Signifikanzniveau's wurden ermittelt:
+\begin{itemize}
+\item Für NativeScript: $Z_{NativeScript}=3,21$
+\item Für React Native: $Z_{ReactNative}=8,39$
+\item Für Flutter: $Z_{Flutter}=7,56$
+\item Für Xamarin: $Z_{Xamarin}=6,01$
+\end{itemize}
+Für alle Frameworks liegt eine statistisch signifikante Korrelation
+zwischen der Zeit und der Popularität nach Google vor. Die Frameworks
+React Native, NativeScript und Flutter werden weiter untersucht, da
+sie eine positive Korrelation aufweisen.
+
+\subsection{Popularität nach vorhanden Apps}
+
+Es wurde nach erfolgreichen Apps recherchiert, die mit den genannten
+Frameworks erstellt wurden. Dazu stellen alle drei Frameworks einen
+Bereich ,,Showcases`` auf den offiziellen Unternehmensseiten bereit,
+welcher einige Apps zeigt.\cite{showcaseFlutter,showcaseNativeScript,showcaseReactNative}
+
+Tabelle \ref{tab:Gegen=0000FCberstellung-popul=0000E4rer-Apps} listet
+jeweils vier populäre Apps auf.
+
+\begin{table}[h]
+\begin{centering}
+\begin{tabular}{|>{\centering}m{3cm}|>{\raggedright}p{3cm}|>{\raggedright}p{3cm}|>{\raggedright}p{3cm}|}
+\hline 
+Name des Frameworks & Flutter & React Native & NativeScript\tabularnewline
+\hline 
+\hline 
+Programmier- bzw. Scriptsprache & Dart & \multicolumn{2}{l|}{JavaScript}\tabularnewline
+\hline 
+bekannte Apps & \begin{itemize}
+\item Alibaba
+\item Google Adwords
+\item App Tree
+\item TopLine
+\end{itemize}
+ & \begin{itemize}
+\item Facebook
+\item Facebook Groups
+\item F8
+\item FanVision Bolt
+\end{itemize}
+ & \begin{itemize}
+\item MyPUMA
+\item Portable North Pole
+\item Regelneef
+\item UH Now
+\end{itemize}
+\tabularnewline
+\hline 
+\multirow{2}{3cm}{Zwei Zeilen zusammenfassen} &  &  & \tabularnewline
+\cline{2-4} 
+ &  &  & \tabularnewline
+\hline 
+\end{tabular}
+\par\end{centering}
+\caption[Gegenüberstellung populärer Apps]{Gegenüberstellung populärer Apps mit Flutter, React Native oder NativeScript
+umgesetzt \label{tab:Gegen=0000FCberstellung-popul=0000E4rer-Apps}}
+\end{table}
+
+
+\section{Vergleich von NativeScript, React Native und Flutter}
+
+Da nicht gänzlich bekannt ist, welche Anforderungen zukünftige Apps
+an das gewählte Framework stellen werden, wurde ein Vergleich aus
+drei verschiedenen Sichtweisen vorgenommen, um die Entscheidung so
+langfristig wie möglich treffen zu können. 
+
+\subsection{Variantenvergleich aus Produktsicht}
+
+Der Vergleich in Tabelle \vref{fig:vergleich_Produktsicht} stellt
+die Grundvoraussetzungen zur Wahl des Frameworks dar. Der Vergleich
+aus Sichtweise der bisherigen Produkte ist am wenigsten nachhaltig,
+da zukünftige Anforderungen an das Framework unberücksichtigt bleiben.
+
+\begin{table}[h]
+\begin{centering}
+\begin{tabular}{|>{\raggedright}p{3.5cm}|>{\raggedright}p{2.4cm}|>{\raggedright}p{2.4cm}|>{\raggedright}p{2.4cm}|}
+\hline 
+Feature & React Native & NativeScript & Flutter\tabularnewline
+\hline 
+\hline 
+pdf - Generierung & ja & ja & ja\tabularnewline
+\hline 
+pdf innerhalb der App anschauen & ja & ja & ja\tabularnewline
+\hline 
+Foto mit der Gerätekamera machen & ja & ja & ja\tabularnewline
+\hline 
+Unterschrift & ja & ja & ja\tabularnewline
+\hline 
+persistenter Speicherzugriff & ja & ja & ja\tabularnewline
+\hline 
+ &  &  & \tabularnewline
+\hline 
+ &  &  & \tabularnewline
+\hline 
+\end{tabular}
+\par\end{centering}
+\caption[Vergleich aus Produktsicht]{Vergleich aus Produktsicht \label{fig:vergleich_Produktsicht}}
+\end{table}
+
+
+\subsection{Variantenvergleich aus Unternehmersicht}
+
+Tabelle \vref{fig:allgemeinerVergleich} zeigt einen Vergleich aus
+unternehmerischer Sicht. In der Firma Facilityport GmbH ist keine
+Einarbeitung in die Sciptsprache JavaScript erforderlich, da die Sprache
+beherrscht wird.
+
+Das technologische Ausrollen ist aus unternehmerischer Sicht wichtig,
+da die Quellcodesicherheit unmittelbar mit der Art des Ausrollens
+zusammenhängt. Beispielsweise kann der Quellcode einer Corsova App
+mit einem beliebigen Packprogramm wie WinRar ausgelesen werden, weshalb
+die App - Logik von Mitbewerbern inspiziert werden kann. 
+
+Aus unternehmerischer Sicht spielt die Zukunftssicherheit des Frameworks
+eine Rolle bei der Wahl des Frameworks. Zur Beurteilung der Zukunftssicherheit
+kann die aktuelle Version des Frameworks (Release) verwendet werden.
+Je länger das Framework am Markt ist, desto eher ist davon auszugehen,
+dass dieses in Zukunft weiter gepflegt wird. Daher ist der Zeitpunkt
+des initialen Release ebenfalls ein Merkmal, um die Zukunftssicherheit
+beurteilen zu können.
+
+Zur Beurteilung der Marktsicherkeit des Frameworks kann geprüft werden,
+von welchen Firmen die Frameworks entwickelt werden. Tabelle \vref{fig:allgemeinerVergleich}
+zeigt, dass React Native und Flutter von großen Firmen mit hohem Umsatz
+und vielen Entwicklern bereitgestellt werden. 
+
+\begin{table}[h]
+\begin{centering}
+\begin{tabular}{|>{\raggedright}p{3.5cm}|>{\raggedright}p{2.4cm}|>{\raggedright}p{2.4cm}|>{\raggedright}p{2.4cm}|}
+\hline 
+Eigenschaft & React Native & NativeScript & Flutter\tabularnewline
+\hline 
+\hline 
+Programmier- / Script- sprache & JavaScript\cite{technologischesAusrollen} & JavaScript und TypeScript\cite{technologischesAusrollen} & Dart 2.0, C++, Skia\cite{technologischesAusrollen}\tabularnewline
+\hline 
+technologisches Ausrollen & JIT - Compiled\cite{technologischesAusrollen} & JIT - Compiled\cite{technologischesAusrollen} & wird zu einer nativen App kompiliert\cite{technologischesAusrollen}\tabularnewline
+\hline 
+ausrollbar unter iOS \& Android & ja\cite{technologischesAusrollen} & ja\cite{technologischesAusrollen} & ja\cite{technologischesAusrollen}\tabularnewline
+\hline 
+Entwickler des Frameworks & Facebook\cite{entwicklerReactNative} & Telerik\cite{entwicklerReactNative} & Google\cite{entwicklerFlutter}\tabularnewline
+\hline 
+Lizenz & MIT\cite{reactNativeLicence} & Apache 2.0 licence\cite{nativeScriptLicence} & BSD licenses\cite{flutterLicense}\tabularnewline
+\hline 
+Anzahl der UI - Elemente & mit einigen UI - Elementen geliefert
+
+externe UI - Bibliothek ist eventuell erforderlich\cite{technologischesAusrollen} & einige UI Elemente, können individuell angepasst werden\cite{technologischesAusrollen} & umfangreichste UI - Bibliothek\cite{technologischesAusrollen}\tabularnewline
+\hline 
+Performance & 80\%\cite{technologischesAusrollen} & 70\%\cite{technologischesAusrollen} & 90\%\cite{technologischesAusrollen}\tabularnewline
+\hline 
+aktuelle Release & 0.56\cite{changelogReactNative} & 4.2.0\cite{changelogNativeScript} & 0.6.0\cite{changelogFlutter}\tabularnewline
+\hline 
+Zeitpunkt des initialen Release & März 2015\cite{historyReactNative} & Mai 2015\cite{historyNativeScript} & Mai 2017\cite{historyFlutter}\tabularnewline
+\hline 
+\end{tabular}
+\par\end{centering}
+\caption[Vergleich aus unternehmerischer Sicht]{Vergleich aus unternehmerischer Sicht \label{fig:allgemeinerVergleich}}
+\end{table}
+
+
+\subsection{Variantenvergleich aus Entwicklersicht}
+
+Tabelle \ref{fig:vergleich_Entwicklersicht} zeigt einen Vergleich
+der Frameworks aus Entwicklersicht. 
+
+Die Prozentangaben beziehen sich auf einen Vergleich gegenüber dem
+Optimium. Der Vergleich stammt aus Quelle \cite{technologischesAusrollen}.
+Beispielsweise liegt die Wiederverwendbarkeit des Quellcodes einer
+nativen App bei $0\%$, während Cordova / Phonegap eine Wiederverwendbarkeit
+von nahezu $100\%$ ermöglichen. Es ist in Tabelle \ref{fig:vergleich_Entwicklersicht}
+zu sehen, dass in diesem Vergleich Flutter die höchstmögliche Wiederverwendbarkeit
+des Quellcodes ermöglicht. Das kann dadurch erklärt werden, dass in
+Flutter die Applogik und das UI mit der Programmiersprache Dart2.0
+geschrieben sind. Ein Zitat aus Quelle \cite{flutterProduktivitaet}
+zeigt, dass die Entwicklungszeit mit Flutter gegenüber anderer Frameworks
+gekürzt werden könnte: ,,Im settling on Flutter because the productivity
+of the tooling and the speed of development is far greater than any
+other i\textquoteright ve seen.``
+
+Die auffindbare Hilfe ist von Flutter nach Quelle \cite{technologischesAusrollen}
+nur etwas besser als von NativeScript. Es muss dabei berücksichtigt
+werden, dass React Native länger als Flutter am Markt ist und Flutter
+insbesondere seit April 2018 einen hohen Zulauf zu verzeichnen hat.
+\cite{historyReactNative,historyFlutter,flutterZuwachs}
+
+NativeScript ermöglicht von den drei Frameworks nach Quelle \cite{technologischesAusrollen}
+die größte Widerverwendbarkeit des Quellcodes.
+
+\begin{table}[h]
+\begin{centering}
+\begin{tabular}{|>{\raggedright}p{3.5cm}|>{\raggedright}p{2.4cm}|>{\raggedright}p{2.4cm}|>{\raggedright}p{2.4cm}|}
+\hline 
+Eigenschaft & React Native & NativeScript & Flutter\tabularnewline
+\hline 
+\hline 
+Wiederverwendbar-keit des Quellcodes & 40\%\cite{technologischesAusrollen} & 60\%\cite{technologischesAusrollen} & 70\%\cite{technologischesAusrollen}\tabularnewline
+\hline 
+auffindbare Hilfe im Internet & 50\%\cite{technologischesAusrollen} & 20\%\cite{technologischesAusrollen} & 30\%\cite{technologischesAusrollen}\tabularnewline
+\hline 
+Popularität & 70\%\cite{technologischesAusrollen} & 30\%\cite{technologischesAusrollen} & 60\%\cite{technologischesAusrollen}\tabularnewline
+\hline 
+Zugriff auf Device Features & 60\%\cite{technologischesAusrollen} & 80\%\cite{technologischesAusrollen} & 70\%\cite{technologischesAusrollen}\tabularnewline
+\hline 
+Häufigkeit der Verwendung & 80\%\cite{technologischesAusrollen} & 10\%\cite{technologischesAusrollen} & 50\%\cite{technologischesAusrollen}\tabularnewline
+\hline 
+MVVM oder MVC Konzepte umsetzbar & MVC & MVVM & MVVM\tabularnewline
+\hline 
+objektorientierter Ansatz möglich & ja & ja & ja\tabularnewline
+\hline 
+ &  &  & \tabularnewline
+\hline 
+\end{tabular}
+\par\end{centering}
+\caption[Vergleich der Frameworks aus Sicht des Entwicklers]{Vergleich der Frameworks aus Sicht des Entwicklers\label{fig:vergleich_Entwicklersicht}}
+\end{table}
+
+
+\section{Generieren einer ,,Hallo Welt`` App}
+
+Um einen besseren Vergleich der Frameworks ziehen zu können, wird
+neben den theoretischen Fakten eine ,,Hallo Welt`` - Applikation
+mit den drei Frameworks geschrieben.
+
+\subsection{,,Hallo Welt`` in Flutter}
+
+Das Framework Flutter unterscheidet sich von aderen Frameworks, da
+die Programmiersprache Dart 2.0 genutzt wird. Dart ist eine objektorientierte
+Programmiersprache und wird für das UI-Elemente und die Applogik verwendet. 
+
+Der Quellcode in Abbildung \ref{fig:Quellcode-Hallo-Welt-flutter-1}
+und \ref{fig:Quellcode-Hallo-Welt-flutter-2} stammt von der Quelle
+\cite{flutterHalloWeltApp}. Die App wurde auf einem Samsung Galaxy
+Tablett getestet, siehe Abbildung \ref{fig:hello_welt_Bildschirmfoto_flutter}.
+
+\begin{sidewaysfigure}[h]
+\begin{lstlisting}[backgroundcolor={\color{lightgray}},basicstyle={\normalsize\sffamily},breaklines=true,frame={leftline,bottomline,rightline,topline},language=C,numbers=left,showstringspaces=false,xleftmargin=15pt]
+// Copyright 2018 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+import 'package:flutter/material.dart';
+
+void main() {
+  runApp(     
+	MaterialApp(       
+		debugShowCheckedModeBanner: false,
+        title: 'Hello Rectangle',       
+		home: Scaffold(         
+			appBar: AppBar(           
+				title: Text('Hello Rectangle'),         
+			),         
+		body: HelloRectangle(),
+      ),
+    ),
+  );
+}
+
+class HelloRectangle extends StatelessWidget {
+	@override   
+	Widget build(BuildContext context) {
+		return Center(
+			child: Container(
+				color: Colors.greenAccent,
+					height: 400.0,
+					width: 300.0,
+					child: Center(
+					 child: Text(
+					 	'Hello!',
+					 	style: TextStyle(fontSize: 40.0),
+					 	textAlign: TextAlign.center,
+					 ),
+					),
+			),
+		);
+	}
+}
+\end{lstlisting}
+
+\caption{Quellcode ,,Hallo Welt`` in Flutter - Teil eins\label{fig:Quellcode-Hallo-Welt-flutter-1}}
+\end{sidewaysfigure}
+
+\begin{sidewaysfigure}[h]
+\begin{lstlisting}[backgroundcolor={\color{lightgray}},basicstyle={\normalsize\sffamily},breaklines=true,frame={leftline,bottomline,rightline,topline},language=C,numbers=left,showstringspaces=false,xleftmargin=15pt]
+class HelloRectangle extends StatelessWidget {
+	@override   
+	Widget build(BuildContext context) {
+		return Center(
+			child: Container(
+				color: Colors.greenAccent,
+					height: 400.0,
+					width: 300.0,
+					child: Center(
+					 child: Text(
+					 	'Hello!',
+					 	style: TextStyle(fontSize: 40.0),
+					 	textAlign: TextAlign.center,
+					 ),
+					),
+			),
+		);
+	}
+}
+\end{lstlisting}
+
+\caption{Quellcode ,,Hallo Welt`` in Flutter - Teil zwei\label{fig:Quellcode-Hallo-Welt-flutter-2}}
+\end{sidewaysfigure}
+
+\begin{figure}[h]
+\begin{centering}
+\includegraphics[width=12cm]{images/Screenshot_20180820-141642}
+\par\end{centering}
+\caption[Bildschirmfoto ,,Hello Welt`` App - Flutter]{Bildschirmfoto ,,Hello Welt`` App - Flutter\label{fig:hello_welt_Bildschirmfoto_flutter}}
+\end{figure}
+
+
+\subsection{,,Hallo Welt`` in React Native}
+
+\section{Entwicklerfreundlichkeit der Frameworks}
+
+\subsection{Entwicklerfreundlichkeit von Flutter}
+
+Hot Reload, Schulungen, Integration in Android Studio.... \cite{schulungFlutter}
+
+\chapter{Einführung}
+
+\section{Vorspann und alle Verzeichnisse}
+
+Im Vorspann könnt ihr verschiedene Listen sehen. In dieser Testarbeit
+sind mal alle nur erdenklichen Punkte vorhanden:
+\begin{itemize}
+\item Ehrenwörtliche Erklärung (nach Guttenberg wohl pflicht)
+\item Sperrvermerk: Eigentlich nur nötig wenn von der Firma verlangt wird.
+Dieser kann dann natürlich auch anders aussehen. Hier am besten mit
+der Firma sprechen
+\item Kurzfassung: Die Kurzfassung ist eigentlich Pflicht. Manche Betreuer
+möchten, dss die Kurzfassung auch in Englisch verfasst wird.
+\item Inhaltsverzeichnis: Ist Pflicht. Da dürfte es keine Diskussion geben.
+\item Abbildungsverzeichnis: War bisher bei all meine Arbeiten Pflicht
+\item Tabellenverzeichnis: War auch Pflicht bei allen Arbeiten
+\end{itemize}
+
+\section{Abschnitt}
+
+Einfach mal um zu zeigen, wie es im Inhaltsverzeichnis aussieht.
+
+\section{Weiterer Abschnitt}
+
+\subsection{Ein Beispiel für einen Unterabschnitt}
+
+\subsection{Und gleich nochmal ein Beispiel}
+
+\subsubsection{Ein Unterunterabschnitt}
+
+Wie ihr seht wird ein Unterunterabschnitt nicht mehr in die Auflistung
+aufgenommen. Dies kann unter ,,Dokument --> Einstellungen --> Nummerierung
+\& Inhaltsverzeichnis`` angepasst werden.
+
+\chapter{Beispiel für Bilder}
+
+Hier testen wir mal ein Bild und wie dieses Dargestellt wird
+
+\section{Bild mit Untertitel}
+
+\begin{figure}[h]
+\begin{centering}
+\includegraphics[width=15cm]{images/1799_Diplomarbeit_Schnitt}
+\par\end{centering}
+\caption[Kurztitel der nur in Abb. Verzeichnis angezeigt wird]{Dies ist ein sehr langer Text. Hier sollte das Bild so beschrieben
+werden, dass man auch eine Ahnung vom Bild hat, wenn man nur den Bilduntertitel
+liest. \label{fig:Testbild}}
+\end{figure}
+
+In diesem Text verweise ich nun auf das eben genannte Bild (Vgl. Abbildung
+\vref{fig:Testbild}). Dazu muss im Bild eine sog. Marke eingefügt
+werden (in diesem Fall: fig:Testbild). Als Bildbreite ist in diesem
+Dokument 15cm gewählt. Dies sieht dann sehr passabel im Fließtext
+aus. Versucht bei den Breiten der Bilder einheitlich zu bleiben. Also
+15cm und 10cm zum Beispiel. Dies hilft dem Leser und unterbricht nicht
+dauernd im Lesefluss. Im Fließtext umschlossene Bilder sind weniger
+gern gesehen in Bachelorarbeiten, aber hier auch wieder den Prof.
+fragen.
+
+\subsection{Tabelle mit Untertitel}
+
+\begin{table}[h]
+\begin{centering}
+\begin{tabular}{|>{\centering}m{3cm}|>{\centering}p{2cm}|>{\raggedright}p{3cm}|>{\raggedright}p{3cm}|}
+\hline 
+titelzeile &  & \multicolumn{2}{c|}{Titel über zwei Spalten}\tabularnewline
+\hline 
+\hline 
+ &  &  & \tabularnewline
+\hline 
+ &  & Aufzählungen
+\begin{itemize}
+\item 1
+\item 2
+\item 3
+\item 4
+\end{itemize}
+gehen nur bei festgelegter Zeilenbreite & Auch Absätze gehen nur bei festgelegter Spaltenbreite.
+
+Wie man hier sieht!\tabularnewline
+\hline 
+\multirow{2}{3cm}{Zwei Zeilen zusammenfassen} &  &  & \tabularnewline
+\cline{2-4} 
+ &  &  & \tabularnewline
+\hline 
+\end{tabular}
+\par\end{centering}
+\caption[Dies ist wieder der Kurztitel zur Tabelle]{Genau wie bei Bildern sollte auch der Tabellenuntertitel die Tabelle
+grob beschreiben }
+
+\end{table}
+
+
+\section{Programmcode schön darstellen}
+
+Hier ein Beispiel wie man Programmcode richtig darstellen könnte:
+
+\begin{figure}[h]
+\begin{lstlisting}[backgroundcolor={\color{lightgray}},basicstyle={\normalsize\sffamily},breaklines=true,frame={leftline,bottomline,rightline,topline},language=C,numbers=left,showstringspaces=false,xleftmargin=15pt]
+#include <stdio.h> 
+main() 
+	{
+        int i;
+        for (i = 0; i<=2; i++)
+        {
+        fork();
+        setvbuf(stdout, NULL, _IOLBF, 0); //(Stream, Pufferangabe, Puffertyp, Puffergroesse)
+        printf("PID=%6d, i=%d\n", getpid(), i);
+        }
+} 
+\end{lstlisting}
+
+\caption{Modifiziertes Programm mit setvbuf()}
+\end{figure}
+
+Unter ,,Dokument --> Einstellungen --> Latexvorspann`` habe ich
+für die Hintergrundfarbe folgendes eingefügt:
+\begin{itemize}
+\item \textbackslash definecolor\{lightgray\}\{rgb\}\{0.8,0.8,0.8\}
+\end{itemize}
+Dies legt die Hintergrundfarbe fest. Sie kann natürlich nach belieben
+angepasst werden. Wenn ihr Rechtsklick auf das Programmlisting macht
+und dann unter ,,Einstellungen --> Erweitert`` geht, seht ihr einige
+Anpassungen die ich gemacht habe. Unter Anderem wird hier auch 15pt
+von links eingerückt, damit die Zeilennummern schön zum Fließtext
+passen. 
+
+\chapter{Das große Thema: Zitieren}
+
+\section{Zitieren nach DIN 1505-2}
+
+Ich versuche immer nach DIN zu zitieren, ist aber echt eine Sache
+für sich. Hier gebe ich keine Garantie auf Richtigkeit. Bitte vorher
+mit dem Betreuer abklären.
+
+Hier zitiere ich aus einem bestimmten Buch: Dieses Zitat ist aus einem
+speziellen Buch das ich am Ende angeben muss. Es sind sogar zwei Bücher,
+nur damit ihr das mal seht. \cite{Williams201205,Siegert200612}
+
+Es ist meist nicht gern gesehen wenn man aus dem Internet zitiert,
+aber wenn es doch mal nötig ist würde ich es so machen. \cite{wiki:42}
+Übrigens könnt ihr bei Wikipedia direkt an die Bibtex-Informationen
+kommen. Einfach Links im Menü unter ,,Werkzeuge --> Seite zitieren``
+
+Gesetztestexte müssen zum Beispiel nicht zitiert werden. Hier reicht
+ein Verweis in der Fußnote\footnote{Das hier ist die supertolle Fußnote, hier steht jetzt irgendwas von
+BGB §12 Abs. 3 Satz 4}.
+
+Zum Bearbeiten der Literatur-Datenbank verwende ich JabRef.
+
+\chapter{Abschluss}
+
+Dieses Dokument ist sicherlich nicht vollständig und gibt euch auch
+nur bedingt Hilfe dabei, welche Unterpunkte ihr in eurer Bachelorarbeit
+schreiben solltet. Das Dokument soll euch nur ein paar Tipps und Tricks
+geben wie ihr Anfangen könnt. Fragen und Anregungen könnt ihr mir
+gerne per Mail oder in meinem Blog schreiben.
+
+\chapter*{Anhang}
+
+% Dieser Code ist noetig, da sonst die falsche Seitenzahl im Inhaltsverzeichnis angezeigt wird
+\clearpage
+\phantomsection
+% Die folgende Zeile sorgt dafuer, dass der Glossar im Inhaltsverzeichnis angezeigt wird.
+\addcontentsline{toc}{chapter}{Glossar}
+
+% Dieser Code ist noetig, da sonst die falsche Seitenzahl im Inhaltsverzeichnis angezeigt wird
+\clearpage
+\phantomsection
+
+\bibliographystyle{bibtex-daten/unsrtdin}
+\addcontentsline{toc}{chapter}{\bibname}\nocite{*}
+\bibliography{bibtex-daten/bachelorarbeit-info}
+
+\newpage{}
+
+\vspace{17.1mm}
+
+\begin{flushleft}
+\textbf{\huge{}Eidesstattliche Erklärung}{\huge\par}
+\par\end{flushleft}
+
+Ich erkläre an Eides statt, dass ich die vorliegende Arbeit selbständig
+und ohne unerlaubte fremde Hilfe angefertigt, andere als die angegebenen
+Quellen und Hilfsmittel nicht benutzt habe. Die aus fremden Quellen
+direkt oder indirekt übernommenen Stellen sind als solche kenntlich
+gemacht. Die Zustimmung des Partnerunternehmens in der Praxis zur
+Verwendung betrieblicher Unterlagen habe ich eingeholt. Die Arbeit
+wurde bisher in gleicher oder ähnlicher Form keiner anderen Prüfungsbehörde
+vorgelegt und auch nicht veröffentlicht.
+
+\vspace{2cm}
+
+\begin{center}
+\begin{tabular*}{15cm}{@{\extracolsep{\fill}}cl}
+Dresden, der \today & \tabularnewline
+ & Henning Nußbaum\tabularnewline
+\end{tabular*}
+\par\end{center}
+\end{document}
