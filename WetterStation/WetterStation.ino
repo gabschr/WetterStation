@@ -638,11 +638,11 @@ int analogeSensoren(int pin) {
 
 	//Werte außerhalb des Messbereichs fuer Sensoren
 	//Wert ueber ca. 3V
-	if (wert[0] > 620) {
+	if (wert[0] > 620 && wert[0] <= 0) {
 		return -90;
 	}
 	//Wert ueber ca. 1,5V
-	if (wert[1] > 310) {
+	if (wert[1] > 310 && wert[1] <= 0) {
 		return -90;
 	}
 
