@@ -12,7 +12,7 @@ const int lcdHoehe = 2;
 
 //Konstanten
 #define MAXZAEHL 65000
-#define abrufIntervallSekunden 30
+#define abrufIntervallSekunden 5
 #define abstandHistorie 60
 
 // GLOBALE VARIABLEN
@@ -20,9 +20,9 @@ const uint8_t historischeWerteAnzahl = 10;
 const uint8_t sensorAnzahl = 3;
 //Array fuer Temp und Feuchtigkeit, v.l.n.r.: Historie- 3.Dimension,  Sensor-Nr.(PORT)- 2. Dimension, Sensor-Werte- 1. Dimension
 //Werte 1.Dimesion: 0: Nr. des Sensors, 1: Messzeitpunkt der Messung (ab Start vom Arduino in s), 2.Wert: Temp, 3.Wert: Luftfeuchte
-double wetterSensor[historischeWerteAnzahl][sensorAnzahl][4];
+double wetterSensor[historischeWerteAnzahl][sensorAnzahl+1][4];
 
-uint32_t letzteAbrufzeit[sensorAnzahl][3]; //0. Stelle: Senssor-Typ, 1.Stelle: letzter Abfragewert Sensor, 1. Stelle: letzte Verschiebung historischer Daten
+uint32_t letzteAbrufzeit[sensorAnzahl+1][3]; //0. Stelle: Senssor-Typ, 1.Stelle: letzter Abfragewert Sensor, 1. Stelle: letzte Verschiebung historischer Daten
 
 unsigned int eepromMaximum = 0;
 
@@ -110,7 +110,8 @@ ISR(PCINT0_vect) {
 
 	// wurde Taster gedrueckt? // LOW-aktiv
 	aktuellerTasterWert = (PINB & (1 << taster) >> taster);
-	if ((aktuellerTasterWert == 0) && (tasterBetaetigung == 0)) {	//wurde taster zum ersten Mal betaetigt?
+	//wurde taster zum ersten Mal oder waehrend Testroutne betaetigt?
+	if (aktuellerTasterWert == 0 && tasterBetaetigung == 0) {
 		tasterBetaetigung = -1;
 		timerTaster = 0;
 		PORTB |= (1 << ledgePD);  //gelbe LED als Kontrolle an
@@ -118,11 +119,24 @@ ISR(PCINT0_vect) {
 	}
 	if ((aktuellerTasterWert == 1) && (tasterBetaetigung == -2)) {	//Taster wurde losgelassen und war vorher stabil
 		PORTB &= ~(1 << ledgePD); //gelbe LED aus
-		if (timerTaster > 125) {	// 125 * 16ms = 2s
+		if (timerTaster > 150) {	//(Testmodus)
+			tasterBetaetigung = 3;
+			return;
+		}
+		if (timerTaster > 125) {	//125 * 16ms = 2s
 			tasterBetaetigung = 2;
 			return;
 		}
 		tasterBetaetigung = 1;
+		return;
+	}
+	if (aktuellerTasterWert == 0 && tasterBetaetigung == 3) {	//Abbruch der Testroutine
+		tasterBetaetigung = 0;
+		anzeigeSensor = 0;
+		wetterSensor[0][sensorAnzahl][2] = 0;
+		wetterSensor[0][sensorAnzahl][3] = 0;
+		anzeigeSensor = 0;
+		return;
 	}
 }
 
@@ -149,7 +163,7 @@ ISR(TIMER0_COMPA_vect) {
 		tasterBetaetigung = -2;
 	}
 	// wenn waehrend des Entprellens Taster los gelassen wurde, soll LED auch irgendwann aus gehen
-	if (timerTaster > 130) {
+	if (timerTaster > 160) {
 		PORTB &= ~(1 << ledgePD); //gelbe LED aus
 	}
 	if ((blinkzeitLed > 0) && ((timer0_over / 6) == blinkzeitLed)) {
@@ -202,7 +216,7 @@ void setup() {
 	// Variablen zuruecksetzen
 	// leere Array wetterSensor und fülle mit Sensor-Nummer
 	for (uint8_t i = 0; i < 6; i++) {
-		for (uint8_t j = 0; j < 3; j++) {
+		for (uint8_t j = 0; j < sensorAnzahl+1; j++) {
 			for (uint8_t k = 0; k < 4; k++) {
 				wetterSensor[i][j][k] = 0;
 			}
@@ -211,6 +225,7 @@ void setup() {
 		wetterSensor[i][0][0] = feuchtLuftPD;
 		wetterSensor[i][1][0] = dht22Sensor;
 		wetterSensor[i][2][0] = analogFeucht;
+		wetterSensor[i][sensorAnzahl][0] = 99;	//TESTSENSORWERT
 	}
 
 	// leere Array letzte Zugriffszeit und setze Sensor-Nr.
@@ -222,6 +237,18 @@ void setup() {
 	letzteAbrufzeit[0][0] = 11;	//SENSOR-TYP DHT11
 	letzteAbrufzeit[1][0] = 22; //SENSOR-TYP DHT22
 	letzteAbrufzeit[2][0] = 1;	//SENSOR-TYP ANALOG AMT1001 + LM35 fuer Temp.
+#ifdef DEBUG
+	for (uint8_t i = 0; i < sensorAnzahl + 1; i++) {
+		Serial.print("SENSORWERT");
+		Serial.print(i);
+		Serial.print(": ");
+		Serial.println(wetterSensor[0][i][0]);
+		Serial.print("letzteAbrufzeit");
+		Serial.print(i);
+		Serial.print(": ");
+		Serial.println(letzteAbrufzeit[i][0]);
+	}
+#endif // DEBUG
 
 	// ADC einstellen
 	// RESET der Register
@@ -315,6 +342,10 @@ void loop() {
 		Serial.println(kontrolle);
 		Serial.print("LED Blinkzeit: ");
 		Serial.println(blinkzeitLed);
+		Serial.print("TasterBetaetigung: ");
+		Serial.println(tasterBetaetigung);
+		Serial.print("Anzeige Sensor: ");
+		Serial.println(anzeigeSensor);
 	}
 #endif // DEBUG
 
@@ -323,18 +354,37 @@ void loop() {
 		aktuelleWerteAnzeigen(lcdBreite, lcdHoehe);
 	}
 	// Events bei Tastendruck
-	if (tasterBetaetigung > 0) {
+	switch (tasterBetaetigung) {
+	case 1:
 		tasterBetaetigung = 0;
-		anzeigeSensor = (anzeigeSensor + 1) % sensorAnzahl;
+		anzeigeSensor = (anzeigeSensor + 1) % (sensorAnzahl);
+		aktuelleWerteAnzeigen(lcdBreite, lcdHoehe);
+		break;
+	case 2:
+		tasterBetaetigung = 0;
+		break;
+	case 3:
+		testWetterStation();
+		break;
+	default:
+		break;
+	}
+
+
+	/*if (tasterBetaetigung > 0) {
+		tasterBetaetigung = 0;
+		anzeigeSensor = (anzeigeSensor + 1) % (sensorAnzahl);
 		aktuelleWerteAnzeigen(lcdBreite, lcdHoehe);
 #ifdef DEBUG
 		Serial.print("AnzeigeSensor: ");
 		Serial.println(anzeigeSensor);
 		Serial.println(tasterBetaetigung);
 #endif
-	}
+	}*/
 	kontrolle = analogeSensoren(analogFeucht);
-
+	if (kontrolle > 0) {
+		aktuelleWerteAnzeigen(lcdBreite, lcdHoehe);
+	}
 	pruefungFeuchtigkeitUeber60();
 }
 
@@ -537,7 +587,7 @@ int analogeSensoren(int pin) {
 	wert[0] = wert[1] = 0;
 
 	//Zeitintervall der Abfrage ueberpruefen
-	if (((timer1Sek)-letzteAbrufzeit[sensorImArray][1]) < abrufIntervallSekunden) {
+	if ((timer1Sek-letzteAbrufzeit[sensorImArray][1]) < abrufIntervallSekunden) {
 		if (letzteAbrufzeit[sensorImArray][1] != 0) {// nach Einschalten soll gemessen werden
 			return -99;
 		}
@@ -690,7 +740,7 @@ void prozentBalkenZeigen(String bezeichnung, double geanderterWertAbsolut, doubl
 void pruefungFeuchtigkeitUeber60() {
 	double maxFeuchtigkeit = 0;
 
-	for (int8_t sensorAbfragen = 0; sensorAbfragen < sensorAnzahl; sensorAbfragen++) {
+	for (int8_t sensorAbfragen = 0; sensorAbfragen < sensorAnzahl+1; sensorAbfragen++) {
 		if (wetterSensor[0][sensorAbfragen][3] > maxFeuchtigkeit) {
 			maxFeuchtigkeit = wetterSensor[0][sensorAbfragen][3];
 		}
@@ -705,4 +755,29 @@ void pruefungFeuchtigkeitUeber60() {
 	}
 	blinkzeitLed = 0;
 	PORTB &= ~(1 << ledrtPD); //LED ausschalten
+}
+
+void testWetterStation() {
+	if (wetterSensor[0][sensorAnzahl][3] <= 0) { //Feuchtigkeit = 0 (Beginn des Testmodus) - 1. Werte setzen
+		wetterSensor[0][sensorAnzahl][2] = -5;
+		wetterSensor[0][sensorAnzahl][3] = 55;
+		letzteAbrufzeit[sensorAnzahl][1] = timer1Sek;
+		anzeigeSensor = sensorAnzahl;
+		return;
+	}
+	if ((timer1Sek - letzteAbrufzeit[sensorAnzahl][1]) > 4) {
+		letzteAbrufzeit[sensorAnzahl][1] = timer1Sek;
+		wetterSensor[0][sensorAnzahl][2] = wetterSensor[0][sensorAnzahl][2] + 5;
+		wetterSensor[0][sensorAnzahl][3] = wetterSensor[0][sensorAnzahl][3] + 5;
+		pruefungFeuchtigkeitUeber60;
+		aktuelleWerteAnzeigen(lcdBreite, lcdHoehe);
+		if (wetterSensor[0][sensorAnzahl][3] > 100) {	//Ende der Testroutine
+			wetterSensor[0][sensorAnzahl][2] = 0;
+			wetterSensor[0][sensorAnzahl][3] = 0;
+			tasterBetaetigung = 0;
+			anzeigeSensor = 0;
+			aktuelleWerteAnzeigen(lcdBreite, lcdHoehe);
+		}
+	}
+	return;
 }
