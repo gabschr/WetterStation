@@ -58,7 +58,7 @@ byte thermometerByte[8] = { B01110, B01010, B01110, B01110, B11111, B11111, B111
 char gradChar = 1;
 byte gradZeichen[8] = { B11100, B10100, B11100, B00000, B00000, B00000, B00000, B00000 };
 char celsiusChar = 2;
-byte clesiusZeichen[8] = { B01110,B10001,B10000,B10000,B10000,B10000,B10001,B01110 };
+byte celsiusZeichen[8] = { B01110,B10001,B10000,B10000,B10000,B10000,B10001,B01110 };
 char prozentChar = 3;
 byte prozentZeichen[8] = { B11000,B11000,B00001,B00010,B00100,B01000,B10011,B00011 };
 char tropfenChar = 4;
@@ -109,8 +109,7 @@ ISR(PCINT0_vect) {
 }
 
 // Abfragen des Sensors am Port D3 (DHT11)
-ISR(INT1_vect)
-{
+ISR(INT1_vect){
 	portInterrupt = 3;
 }
 
@@ -179,7 +178,7 @@ void setup() {
 	lcd.begin(lcdBreite, lcdHoehe);
 	lcd.createChar(thermometerChar, thermometerByte);
 	lcd.createChar(gradChar, gradZeichen);
-	lcd.createChar(celsiusChar, clesiusZeichen);
+	lcd.createChar(celsiusChar, celsiusZeichen);
 	lcd.createChar(prozentChar, prozentZeichen);
 	lcd.createChar(tropfenChar, tropfenZeichen);
 	lcd.createChar(deltaChar, deltaZeichen);
