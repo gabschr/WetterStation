@@ -1479,15 +1479,15 @@ status open
 \align center
 \begin_inset Graphics
 	filename images/2018-12-01 22.34.54.jpg
-	width 7cm
+	width 3.5cm
 	rotateOrigin center
 
 \end_inset
 
- 
+
 \begin_inset Graphics
-	filename images/2018-12-01 22.44.29.jpg
-	width 7cm
+	filename images/2018-12-01 22.34.54.jpg
+	width 3.5cm
 	rotateOrigin center
 
 \end_inset
@@ -1588,7 +1588,7 @@ Auf dem Display wird die aktuelle Luftfeuchtedifferenz
  und der Standort des Sensors gezeigt, siehe Abbildung 
 \begin_inset CommandInset ref
 LatexCommand ref
-reference "fig:displayanzeige"
+reference "fig:wertaenderung"
 plural "false"
 caps "false"
 noprefix "false"
@@ -1596,6 +1596,49 @@ noprefix "false"
 \end_inset
 
 .
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\noindent
+\align center
+\begin_inset Graphics
+	filename images/2018-12-01 22.44.29.jpg
+	width 3.5cm
+	rotateOrigin center
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Feuchtigkeitsänderung anzeigen
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:wertaenderung"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Subsubsection
