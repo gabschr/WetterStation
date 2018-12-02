@@ -811,25 +811,26 @@ void pruefungFeuchtigkeitUeber60() {
 
 void testWetterStation() {
 	anzeigeSensor = sensorAnzahl;
-	aktuelleWerteAnzeigen(lcdBreite, lcdHoehe);
 	if (wetterSensor[0][sensorAnzahl][3] <= 0) { //Feuchtigkeit = 0 (Beginn des Testmodus) - 1. Werte setzen
 		wetterSensor[0][sensorAnzahl][2] = -5;
 		wetterSensor[0][sensorAnzahl][3] = 55;
 		letzteAbrufzeit[sensorAnzahl][1] = timer1Sek;
 	}
-	if ((timer1Sek - letzteAbrufzeit[sensorAnzahl][1]) > 4) {
-		letzteAbrufzeit[sensorAnzahl][1] = timer1Sek;
-		wetterSensor[0][sensorAnzahl][2] = wetterSensor[0][sensorAnzahl][2] + 5;
-		wetterSensor[0][sensorAnzahl][3] = wetterSensor[0][sensorAnzahl][3] + 5;
-		pruefungFeuchtigkeitUeber60;
-		aktuelleWerteAnzeigen(lcdBreite, lcdHoehe);
-		if (wetterSensor[0][sensorAnzahl][3] > 100) {	//Ende der Testroutine
-			wetterSensor[0][sensorAnzahl][2] = 0;
-			wetterSensor[0][sensorAnzahl][3] = 0;
-			tasterBetaetigung = 0;
-			anzeigeSensor = 0;
-			PORTB &= ~(1 << ledgePD);	//LEDge ausschalten
-		}
+	if ((timer1Sek - letzteAbrufzeit[sensorAnzahl][1]) < 4) {
+		return;
+	}
+	letzteAbrufzeit[sensorAnzahl][1] = timer1Sek;
+	wetterSensor[0][sensorAnzahl][2] = wetterSensor[0][sensorAnzahl][2] + 5;
+	wetterSensor[0][sensorAnzahl][3] = wetterSensor[0][sensorAnzahl][3] + 5;
+	pruefungFeuchtigkeitUeber60;
+	aktuelleWerteAnzeigen(lcdBreite, lcdHoehe);
+	if (wetterSensor[0][sensorAnzahl][3] > 100) {	//Ende der Testroutine
+		wetterSensor[0][sensorAnzahl][2] = 0;
+		wetterSensor[0][sensorAnzahl][3] = 0;
+		tasterBetaetigung = 0;
+		anzeigeSensor = 0;
+		PORTB &= ~(1 << ledgePD);	//LEDge ausschalten
+	
 	}
 	return;
 }
