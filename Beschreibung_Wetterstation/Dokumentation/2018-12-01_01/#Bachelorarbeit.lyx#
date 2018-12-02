@@ -1230,10 +1230,44 @@ noprefix "false"
 \end_layout
 
 \begin_layout Standard
+Es ist zu sehen, dass in der Setup - Routine das Display initalisiert wird.
+ Dazu zählt auch die Initalisierung eigener Symbole.
+ Variablen werden auf Default - Werte gesetzt und die PIN - Belegung wird
+ zugewiesen.
+ Der AD Wandler wird eingestellt und die Interruptanfragen werden initalisiert.
+\end_layout
+
+\begin_layout Standard
+Die Funktion loop() steuert die Logik des Programmablaufs.
+ Zunächst wird der Sensor am Port D3 abgefragt.
+ Sollte die Abfrage erfolgreich sein, wird eine Veränderung des Tasters
+ ausgewertet.
+ Nach der gleichen Logik wird im Anschluss der Sensor am Port D4 und der
+ analoge Sensor ausgewertet.
+ Nach Auswertung der Sensoren wird geprüfuft, ob die relative Luftfeuchtigkeit
+ den Wert von 
+\begin_inset Formula $60\%$
+\end_inset
+
+ übersteigt.
+\begin_inset Foot
+status open
+
+\begin_layout Plain Layout
+Abi 80% realtiver Luftfeuchtigkeit besteht die Gefahr der Bildung von Schimmel.
+ Damit i
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
 \begin_inset Float figure
 wide false
 sideways false
-status collapsed
+status open
 
 \begin_layout Plain Layout
 \noindent
@@ -1472,22 +1506,22 @@ name "fig:papAnzeige"
 \begin_inset Float figure
 wide false
 sideways false
-status open
+status collapsed
 
 \begin_layout Plain Layout
 \noindent
 \align center
 \begin_inset Graphics
 	filename images/2018-12-01 22.34.54.jpg
-	width 3.5cm
+	width 7cm
 	rotateOrigin center
 
 \end_inset
 
-
+ 
 \begin_inset Graphics
-	filename images/2018-12-01 22.34.54.jpg
-	width 3.5cm
+	filename images/2018-12-01 22.44.29.jpg
+	width 7cm
 	rotateOrigin center
 
 \end_inset
@@ -1588,7 +1622,7 @@ Auf dem Display wird die aktuelle Luftfeuchtedifferenz
  und der Standort des Sensors gezeigt, siehe Abbildung 
 \begin_inset CommandInset ref
 LatexCommand ref
-reference "fig:wertaenderung"
+reference "fig:displayanzeige"
 plural "false"
 caps "false"
 noprefix "false"
@@ -1596,49 +1630,6 @@ noprefix "false"
 \end_inset
 
 .
-\end_layout
-
-\begin_layout Standard
-\begin_inset Float figure
-wide false
-sideways false
-status open
-
-\begin_layout Plain Layout
-\noindent
-\align center
-\begin_inset Graphics
-	filename images/2018-12-01 22.44.29.jpg
-	width 3.5cm
-	rotateOrigin center
-
-\end_inset
-
-
-\end_layout
-
-\begin_layout Plain Layout
-\begin_inset Caption Standard
-
-\begin_layout Plain Layout
-Feuchtigkeitsänderung anzeigen
-\begin_inset CommandInset label
-LatexCommand label
-name "fig:wertaenderung"
-
-\end_inset
-
-
-\end_layout
-
-\end_inset
-
-
-\end_layout
-
-\end_inset
-
-
 \end_layout
 
 \begin_layout Subsubsection

@@ -1230,10 +1230,49 @@ noprefix "false"
 \end_layout
 
 \begin_layout Standard
+Es ist zu sehen, dass in der Setup - Routine das Display initalisiert wird.
+ Dazu zählt auch die Initalisierung eigener Symbole.
+ Variablen werden auf Default - Werte gesetzt und die PIN - Belegung wird
+ zugewiesen.
+ Der AD Wandler wird eingestellt und die Interruptanfragen werden initalisiert.
+\end_layout
+
+\begin_layout Standard
+Die Funktion loop() steuert die Logik des Programmablaufs.
+ Zunächst wird der Sensor am Port D3 abgefragt.
+ Sollte die Abfrage erfolgreich sein, wird eine Veränderung des Tasters
+ ausgewertet.
+ Nach der gleichen Logik wird im Anschluss der Sensor am Port D4 und der
+ analoge Sensor ausgewertet.
+ Nach Auswertung der Sensoren wird geprüfuft, ob die relative Luftfeuchtigkeit
+ den Wert von 
+\begin_inset Formula $60\%$
+\end_inset
+
+ übersteigt.
+\begin_inset Foot
+status collapsed
+
+\begin_layout Plain Layout
+Ab 80% realtiver Luftfeuchtigkeit besteht die Gefahr der Bildung von Schimmel.
+ Damit vor dem Erreichen des Grenzwertes eine Regelung erfolgen kann, wurde
+ ein geringerer Grenzwert gewählt.
+\end_layout
+
+\end_inset
+
+ Nach der Prüfung werden die bisherigen Werte in einem Array fortlaufend
+ gespeichert, um eine Auswertung des Temperatur- und / oder Feuchtigkeitsverlauf
+es realisieren zu können.
+ Vor dem erneuten Anschieben der loop() Funktion erfolgt eine weitere Abfrage
+ nach Betätigung des Tasters.
+\end_layout
+
+\begin_layout Standard
 \begin_inset Float figure
 wide false
 sideways false
-status collapsed
+status open
 
 \begin_layout Plain Layout
 \noindent
@@ -1472,7 +1511,7 @@ name "fig:papAnzeige"
 \begin_inset Float figure
 wide false
 sideways false
-status open
+status collapsed
 
 \begin_layout Plain Layout
 \noindent
