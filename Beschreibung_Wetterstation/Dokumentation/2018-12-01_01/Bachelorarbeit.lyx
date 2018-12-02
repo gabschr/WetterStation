@@ -1508,53 +1508,6 @@ name "fig:papAnzeige"
 \end_layout
 
 \begin_layout Standard
-\begin_inset Float figure
-wide false
-sideways false
-status collapsed
-
-\begin_layout Plain Layout
-\noindent
-\align center
-\begin_inset Graphics
-	filename images/2018-12-01 22.34.54.jpg
-	width 7cm
-	rotateOrigin center
-
-\end_inset
-
- 
-\begin_inset Graphics
-	filename images/2018-12-01 22.44.29.jpg
-	width 7cm
-	rotateOrigin center
-
-\end_inset
-
-
-\end_layout
-
-\begin_layout Plain Layout
-\begin_inset Caption Standard
-
-\begin_layout Plain Layout
-Foto Displayanzeige
-\begin_inset CommandInset label
-LatexCommand label
-name "fig:displayanzeige"
-
-\end_inset
-
-
-\end_layout
-
-\end_inset
-
-
-\end_layout
-
-\end_inset
-
 
 \end_layout
 
@@ -1711,6 +1664,101 @@ Das Projekt wurde im geforderten Umfang umgesetzt.
 \begin_layout Standard
 Durch eine Erweiterung kann der Mikrocontroller zukünftig eine Lüftung in
  Abhängigkeit von relativer Luftfeuchtigkeit und Temperatur regeln.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways true
+status collapsed
+
+\begin_layout Plain Layout
+\begin_inset listings
+lstparams "backgroundcolor={\color{lightgray}},basicstyle={\normalsize\sffamily},breaklines=true,frame={leftline,bottomline,rightline,topline},language=C,numbers=left,showstringspaces=false,xleftmargin=15pt"
+inline false
+status open
+
+\begin_layout Plain Layout
+
+<Page xmlns="http://schemas.nativescript.org/tns.xsd" navigatingTo="onNavigatingTo"
+ class="page">
+\end_layout
+
+\begin_layout Plain Layout
+
+    <Page.actionBar>
+\end_layout
+
+\begin_layout Plain Layout
+
+        <ActionBar title="My App" icon="" class="action-bar">
+\end_layout
+
+\begin_layout Plain Layout
+
+        </ActionBar>
+\end_layout
+
+\begin_layout Plain Layout
+
+    </Page.actionBar>
+\end_layout
+
+\begin_layout Plain Layout
+
+    <StackLayout class="p-20">
+\end_layout
+
+\begin_layout Plain Layout
+
+        <Label text="Hello World" class="h1 text-center"/>
+\end_layout
+
+\begin_layout Plain Layout
+
+    </StackLayout>
+\end_layout
+
+\begin_layout Plain Layout
+
+</Page> 
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Quellcode 
+\begin_inset Quotes gld
+\end_inset
+
+Hallo Welt
+\begin_inset Quotes grd
+\end_inset
+
+ in NativeScript
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:Quellcode-Hallo-Welt-NativeScript"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
