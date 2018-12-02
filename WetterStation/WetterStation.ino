@@ -713,6 +713,7 @@ void tasterAuswerten() {
 		testWetterStation();
 		break;
 	default:
+    aktuelleWerteAnzeigen(lcdBreite, lcdHoehe);
 		break;
 	}
 }
