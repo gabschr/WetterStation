@@ -169,6 +169,11 @@ ISR(TIMER2_COMPA_vect) {
 
 
 //************* SETUP-ROUTINE **********************************
+//Name:           void setup()                                 *
+//Beschreibung    initialen Zustand laden                      *
+//Parameter       keine                                        *
+//Rückgabe        keine                                        *
+//**************************************************************
 void setup() {
 	//Display initialisieren
 	lcd.begin(lcdBreite, lcdHoehe);
@@ -306,7 +311,12 @@ void sensorNameFestlegen() {
 	}
 }
 
-//************* HAUPTPROGRAMM (LOOP) ***************************
+//************* HAUPTPROGRAMM (LOOP)****************************
+//Name:           void loop()                                  *
+//Beschreibung    Enlosschleife startet Programmfunktionen     *
+//Parameter       keine                                        *
+//Rückgabe        keine                                        *
+//**************************************************************
 void loop() {
 	int8_t kontrolle = 0;
 	kontrolle = sensorFeuchtTempAbfrage(feuchtLuftPD);
@@ -366,7 +376,12 @@ void loop() {
 	}
 }
 
-//************* ABFRAGEN DES DIGITALEN SENSORS *****************
+//************* ABFRAGEN DES DIGITALEN SENSORS******************
+//Name:           int sensorFeuchtTempAbfrage()                *
+//Beschreibung    Abrufen Temp. Feuchtigkeitswerte             *
+//Parameter       uint8_t                                      *
+//Rückgabe        int                                          *
+//**************************************************************
 int sensorFeuchtTempAbfrage(uint8_t pin) {
 	//Variablen
 	int8_t sensorImArray = -1;
@@ -563,7 +578,12 @@ int sensorFeuchtTempAbfrage(uint8_t pin) {
 	return 1;
 }
 
-//************* ABFRAGEN DES ANALOGEN SENSORS ******************
+//************* ABFRAGEN DES ANALOGEN SENSORS*******************
+//Name:           int analogeSensoren()                        *
+//Beschreibung    Abrufen Temp. Feuchtigkeitswerte             *
+//Parameter       int                                          *
+//Rückgabe        int                                          *
+//**************************************************************
 // PIN, was uebergeben wird: Feuchtigkeitssensor, Temp-Sensor ein PIN danach
 int analogeSensoren(int pin) {
 	uint16_t zaehler = MAXZAEHL;
@@ -631,8 +651,6 @@ int analogeSensoren(int pin) {
 		return -90;
 	}
 
-	// Plausibilitaetspruefung muss noch durchgeführt werden
-
 	//Werte ausgeben- DIGITALWERT richtig umrechnen
 	wetterSensor[0][sensorImArray][1] = timer1Sek;
 	wetterSensor[0][sensorImArray][2] = (double)wert[1] * 500 / 1023;
@@ -641,7 +659,13 @@ int analogeSensoren(int pin) {
 	return 1;
 }
 
-//LED-Blinken einstellen für Luftfeuchte-Wetre zwischen 60% und 100% einstellen
+
+//************* kritischen Feuchtigkeitswert prüfen*************
+//Name:           void analogeSensoren()                       *
+//Beschreibung    LED ab 60% rel. Luftf. blinken lassen        *
+//Parameter       keine                                        *
+//Rückgabe        keine                                        *
+//**************************************************************
 void pruefungFeuchtigkeitUeber60() {
 	double maxFeuchtigkeit = 0;
 
@@ -664,6 +688,13 @@ void pruefungFeuchtigkeitUeber60() {
 	return;
 }
 
+//************* Taster auswerten********************************
+//Name:           void tasterAuswerten()                       *
+//Beschreibung    Funktionen in Abhängigkeit von Tasterdruck   *
+//                anschieben                                   *
+//Parameter       keine                                        *
+//Rückgabe        keine                                        *
+//**************************************************************
 void tasterAuswerten() {
 	// Events bei Tastendruck
 	switch (tasterBetaetigung) {
@@ -687,6 +718,13 @@ void tasterAuswerten() {
 	}
 }
 
+//************* aktuellen Wert anzeigen*************************
+//Name:           void aktuelleWerteAnzeigen()                 *
+//Beschreibung    aktuelle Temperatur und Feuchtigkeitswerte   *
+//                auf dem Display anzeigen                     *
+//Parameter       int displayBreite, int displayHoehe          *
+//Rückgabe        keine                                        *
+//**************************************************************
 void aktuelleWerteAnzeigen(int displayBreite, int displayHoehe) {
 	sensorNameFestlegen();
 
@@ -713,6 +751,13 @@ void aktuelleWerteAnzeigen(int displayBreite, int displayHoehe) {
 	}
 }
 
+//************* Wertänderung anzeigen **************************
+//Name:           void wertAenderungAnzeigen()                 *
+//Beschreibung    rel. Luftfeuchtigkeitsänderung ermitteln     *
+//                und Funktion zur Ausgabe am Display starten  *
+//Parameter       keine                                        *
+//Rückgabe        keine                                        *
+//**************************************************************
 void wertAenderungAnzeigen() {
 	double wertAenderungProzentual = 0;
 
@@ -734,6 +779,14 @@ void wertAenderungAnzeigen() {
 	return;
 }
 
+//************* prozentuale Änderung anzeigen ******************
+//Name:           void prozentBalkenZeigen()                   *
+//Beschreibung    prozentuale Veränderung als Wert             *
+//                und visualisiert ausgeben                    *
+//Parameter       double geanderterWertProzentual,             *
+//                int maxCharZeichen, int differenzStelle      *
+//Rückgabe        keine                                        *
+//**************************************************************
 void prozentBalkenZeigen(double geanderterWertProzentual, int maxCharZeichen, int differenzStelle) {
 	sensorNameFestlegen();
 	lcd.clear();
@@ -775,6 +828,13 @@ void prozentBalkenZeigen(double geanderterWertProzentual, int maxCharZeichen, in
 	}
 }
 
+//************* historisches Array vorschieben *****************
+//Name:           void verlaufArrayVorschieben()               *
+//Beschreibung    historische Werte im Array an nächst         *
+//                größere Position übergeben                   *
+//Parameter       keine                                        *
+//Rückgabe        keine                                        *
+//**************************************************************
 void verlaufArrayVorschieben() {
 	int aktuelleZeit = timer1Sek;
 	if (((aktuelleZeit - letzteVerschiebungszeitpunkt) < abstandHistorie)) {
@@ -810,6 +870,13 @@ void verlaufArrayVorschieben() {
 	return;
 }
 
+//************* Testfuktion Wetterstation **********************
+//Name:           void testWetterStation()                     *
+//Beschreibung    Testfunktion zur Prüfung, ob LCD-Display     *
+//                und LED's richtig arbeiten                   *
+//Parameter       keine                                        *
+//Rückgabe        keine                                        *
+//**************************************************************
 void testWetterStation() {
 	anzeigeSensor = sensorAnzahl;
 	if (wetterSensor[0][sensorAnzahl][3] <= 0) { //Feuchtigkeit = 0 (Beginn des Testmodus) - 1. Werte setzen
