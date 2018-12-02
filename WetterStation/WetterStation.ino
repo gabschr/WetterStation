@@ -16,8 +16,8 @@
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 #define MAXZAEHL 65000
-#define abrufIntervallSekunden 5
-#define abstandHistorie 15
+#define abrufIntervallSekunden 30
+#define abstandHistorie 60
 // PORTDEKLARATIONEN
 #define ledrtPD  PB5     //PIN fuer rote LED
 #define ledgePD PB4     //PIN fuer gelbe LED
@@ -83,7 +83,8 @@ ISR(PCINT0_vect) {
 		PORTB |= (1 << ledgePD);  //gelbe LED als Kontrolle an
 		return;
 	}
-	if ((aktuellerTasterWert == 1) && (tasterBetaetigung == -2)) {	//Taster wurde losgelassen und war vorher stabil
+	//Taster wurde losgelassen und war vorher stabil
+	if ((aktuellerTasterWert == 1) && (tasterBetaetigung <= -2)) {
 		PORTB &= ~(1 << ledgePD); //gelbe LED aus
 		if (timerTaster > 200) {	//(Testmodus)
 			tasterBetaetigung = 99;
@@ -640,6 +641,29 @@ int analogeSensoren(int pin) {
 	return 1;
 }
 
+//LED-Blinken einstellen für Luftfeuchte-Wetre zwischen 60% und 100% einstellen
+void pruefungFeuchtigkeitUeber60() {
+	double maxFeuchtigkeit = 0;
+
+	for (int8_t sensorAbfragen = 0; sensorAbfragen < sensorAnzahl + 1; sensorAbfragen++) {
+		if (wetterSensor[0][sensorAbfragen][3] > maxFeuchtigkeit) {
+			maxFeuchtigkeit = wetterSensor[0][sensorAbfragen][3];
+		}
+	}
+	if (maxFeuchtigkeit >= 60) {
+		maxFeuchtigkeit = (100 - maxFeuchtigkeit) * 3 / 8;
+		if (maxFeuchtigkeit < 1) {
+			maxFeuchtigkeit = 1;
+		}
+		blinkzeitLedRt = maxFeuchtigkeit;
+		return;
+	}
+	blinkzeitLedRt = 0;
+	PORTB &= ~(1 << ledrtPD); //LED ausschalten
+
+	return;
+}
+
 void tasterAuswerten() {
 	// Events bei Tastendruck
 	switch (tasterBetaetigung) {
@@ -783,29 +807,6 @@ void verlaufArrayVorschieben() {
 	}
 
 	letzteVerschiebungszeitpunkt = aktuelleZeit;
-	return;
-}
-
-//LED-Blinken einstellen für Luftfeuchte-Wetre zwischen 60% und 100% einstellen
-void pruefungFeuchtigkeitUeber60() {
-	double maxFeuchtigkeit = 0;
-
-	for (int8_t sensorAbfragen = 0; sensorAbfragen < sensorAnzahl + 1; sensorAbfragen++) {
-		if (wetterSensor[0][sensorAbfragen][3] > maxFeuchtigkeit) {
-			maxFeuchtigkeit = wetterSensor[0][sensorAbfragen][3];
-		}
-	}
-	if (maxFeuchtigkeit >= 60) {
-		maxFeuchtigkeit = (100 - maxFeuchtigkeit) * 3 / 8;
-		if (maxFeuchtigkeit < 1) {
-			maxFeuchtigkeit = 1;
-		}
-		blinkzeitLedRt = maxFeuchtigkeit;
-		return;
-	}
-	blinkzeitLedRt = 0;
-	PORTB &= ~(1 << ledrtPD); //LED ausschalten
-
 	return;
 }
 
