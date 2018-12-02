@@ -750,7 +750,7 @@ Weitere Sensoren zur Ermittlung mehrerer Werte werden implementiert.
 
 \begin_layout Itemize
 Die Anzeige soll erweitert werden und beispielsweise einen Temperaturverlauf
- visualisieren.
+ zu visualisieren.
 \end_layout
 
 \begin_layout Itemize
@@ -769,20 +769,6 @@ Das Ziel unserers Microcontroller Projektes ist es, eine Wetterstation zu
 
 \begin_layout Section
 Verwendete Komponenten
-\end_layout
-
-\begin_layout Standard
-Tabelle 
-\begin_inset CommandInset ref
-LatexCommand ref
-reference "fig:verwendeteKomponenten"
-plural "false"
-caps "false"
-noprefix "false"
-
-\end_inset
-
- zeigt, welche Komponenten verwendet wurden.
 \end_layout
 
 \begin_layout Standard
@@ -1139,24 +1125,24 @@ name "fig:verwendeteKomponenten"
 
 \end_layout
 
-\begin_layout Section
-Hardwareaufbau
-\end_layout
-
 \begin_layout Standard
-Abbildung 
+Tabelle 
 \begin_inset CommandInset ref
 LatexCommand ref
-reference "fig:blockschaltbild"
+reference "fig:verwendeteKomponenten"
 plural "false"
 caps "false"
 noprefix "false"
 
 \end_inset
 
- zeigt das Blockschaltbild.
- Da LED's und Sensoren wenig Strom verbrauchen, ist eine externe Stromversorgung
- nicht erforderlich.
+ zeigt, welche Hardware-Komponenten verwendet wurden.
+ Die Steuerung übernimmt ein Arduino Uno.
+ Mehrere Sensoren sind angeschlossen.
+\end_layout
+
+\begin_layout Section
+Hardwareaufbau
 \end_layout
 
 \begin_layout Standard
@@ -1199,6 +1185,23 @@ name "fig:blockschaltbild"
 
 \end_layout
 
+\begin_layout Standard
+Abbildung 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:blockschaltbild"
+plural "false"
+caps "false"
+noprefix "false"
+
+\end_inset
+
+ zeigt das Blockschaltbild.
+ Da LED's und Sensoren wenig Strom verbrauchen, ist eine externe Stromversorgung
+ nicht erforderlich.
+ 
+\end_layout
+
 \begin_layout Section
 Softwaretechnische Implementierung
 \end_layout
@@ -1208,64 +1211,11 @@ Es wurde ein funktionsorientierter und modulrer Ansatz verwendet.
  Von einem Auslagern in mehrere Dateien wurde abgesehen, da der Quellcodeumfang
  noch recht gut in einer Datei angezeigt werden kann.
  Durch den modularen Ansatz können weitere Sensoren oder andere Displayausführun
-gne mit weniger Aufwand integriert werden.
+gen mit wenig Aufwand implementiert werden.
 \end_layout
 
 \begin_layout Subsection
 Start und Setup - Routine
-\end_layout
-
-\begin_layout Standard
-Abbildung 
-\begin_inset CommandInset ref
-LatexCommand ref
-reference "fig:pap_Setup_Routine"
-plural "false"
-caps "false"
-noprefix "false"
-
-\end_inset
-
- zeigt den Programmablaufplan der Start- und Setuproutine.
-\end_layout
-
-\begin_layout Standard
-Es ist zu sehen, dass in der Setup - Routine das Display initalisiert wird.
- Dazu zählt auch die Initalisierung eigener Symbole.
- Variablen werden auf Default - Werte gesetzt und die PIN - Belegung wird
- zugewiesen.
- Der AD Wandler wird eingestellt und die Interruptanfragen werden initalisiert.
-\end_layout
-
-\begin_layout Standard
-Die Funktion loop() steuert die Logik des Programmablaufs.
- Zunächst wird der Sensor am Port D3 abgefragt.
- Sollte die Abfrage erfolgreich sein, wird eine Veränderung des Tasters
- ausgewertet.
- Nach der gleichen Logik wird im Anschluss der Sensor am Port D4 und der
- analoge Sensor ausgewertet.
- Nach Auswertung der Sensoren wird geprüfuft, ob die relative Luftfeuchtigkeit
- den Wert von 
-\begin_inset Formula $60\%$
-\end_inset
-
- übersteigt.
-\begin_inset Foot
-status collapsed
-
-\begin_layout Plain Layout
-Ab 80% realtiver Luftfeuchtigkeit besteht die Gefahr der Bildung von Schimmel.
- Damit vor dem Erreichen des Grenzwertes eine Regelung erfolgen kann, wurde
- ein geringerer Grenzwert gewählt.
-\end_layout
-
-\end_inset
-
- Nach der Prüfung werden die bisherigen Werte in einem Array fortlaufend
- gespeichert, um eine Auswertung des Temperatur- und / oder Feuchtigkeitsverlauf
-es realisieren zu können.
- Vor dem erneuten Anschieben der loop() Funktion erfolgt eine weitere Abfrage
- nach Betätigung des Tasters.
 \end_layout
 
 \begin_layout Standard
@@ -1311,6 +1261,57 @@ name "fig:pap_Setup_Routine"
 
 \end_layout
 
+\begin_layout Standard
+Abbildung 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:pap_Setup_Routine"
+plural "false"
+caps "false"
+noprefix "false"
+
+\end_inset
+
+ zeigt den Programmablaufplan der Start- und Setuproutine.
+\end_layout
+
+\begin_layout Standard
+Es ist zu sehen, dass in der Setup - Routine das Display initalisiert wird.
+ Dazu zählt auch die Initalisierung eigener Symbole.
+ Variablen werden auf Default - Werte gesetzt und die PIN - Belegung wird
+ zugewiesen.
+ Der AD - Wandler sowie die Interruproutinen werden initalisiert.
+\end_layout
+
+\begin_layout Standard
+Die Funktion loop() steuert die Logik des Programmablaufs.
+ Nacheinander werden alle zwei digitalen Sensoren und die analogen Sensoren
+ abgefragt.
+ Ob die Abfrage erfolgreich war oder nicht signalisiert die entsprechende
+ Funktion.
+ Das Display wird nur aktualisiert, wenn neue Daten vorhanden sind oder
+ der Taster betätigt wurde.
+ Im Anschluss scannt eine weitere Funktion alle Sensorwerte, um die maximale
+ relative Luftfeuchtigkeit festzustellen.
+\begin_inset Foot
+status collapsed
+
+\begin_layout Plain Layout
+Ab 80% realtiver Luftfeuchtigkeit besteht die Gefahr der Bildung von Schimmel.
+ Damit vor dem Erreichen des Grenzwertes eine Regelung erfolgen kann, wurde
+ ein geringerer Grenzwert gewählt.
+\end_layout
+
+\end_inset
+
+.
+ Um den Verlauf der Temperatur- und/ oder des Feuchtigkeitswertes ansehen
+ zu können, werden nach Ablauf einer bestimmten vordefinierten Zeit die
+ bisherigen Werte in ein Array fortlaufend gespeichert.
+ Wurde während des Durchlaufs der Loop das Betätigen des Tasters festgestellt,
+ wird dies vor dem erneuten Durchlauf der loop() - verarbeitet.
+\end_layout
+
 \begin_layout Subsection
 Verwendung von Interrupts
 \end_layout
@@ -1326,7 +1327,23 @@ noprefix "false"
 
 \end_inset
 
- zeigt den Programmablaufplan der Interrupts.
+ zeigt den Programmablaufplan der Interrupt-Service-Routinen.
+ Port Change Interrups signaliseren Veränderungen der Signalpegel an den
+ Eingängen der digitalen Sensoren, die von der entsprechenden Funktion interpret
+iert werden.
+ Timer0 steuert das Leucht- und Blink-Verhalten der roten und gelben LED
+ im Zusammenspiel mit den Port Change Interrupt, der Veränderungen am Signalpege
+l des Tasters verarbeitet.
+ Timer2 wird für die Abfrage der Sensoren gebraucht, um die Länge der Signalzust
+ände festzustellen.
+ Timer1 zählt sekundengenau die Zeit, seitdem das Programm vom Prozessor
+ ausgeführt wird.
+\end_layout
+
+\begin_layout Standard
+Schwierigkeiten ergaben sich bei der Implementierung von Interrupts, da
+ Fehler nicht so leicht lokalisierbar sind, das Interrups aus jeden Programmteil
+ aufgerufen werden können.
 \end_layout
 
 \begin_layout Standard
@@ -1388,6 +1405,11 @@ noprefix "false"
 \end_inset
 
  zeigt den Programmablaufplan zur Auswertung der Sensoren.
+ 
+\end_layout
+
+\begin_layout Subsubsection
+Abfrage der Digitalen Sensoren
 \end_layout
 
 \begin_layout Standard
@@ -1433,35 +1455,93 @@ name "fig:pap_Sensorauswertung"
 
 \end_layout
 
-\begin_layout Subsection
-Anzeige der Werte
+\begin_layout Standard
+Die Routine zum Abfragen der digitalen Sensoren DHT11 und DHT22 sind ähnlich.
+ Die Abfragefolge ist gleich: Um den Sensor zu aktivieren, wird vom Prozessor
+ nacheinander ein längeres LOW-Signal gefolgt von einem kürzeren HIGH-Signal
+ verlangt.
+ Danach werden 32 Bit Daten (Feuchtigkeit und Temoperatur) vom Sensor geschickt,
+ gefolgt von einer Prüfsumme.
+ Die Länge der HIGH-Phasen entscheidet, ob das gesendete Bit HIGH oder LOW
+ ist.
+ Zwischen zwei Abfrageintervallen müssen mindestens 2 Sekunden Pause sein.
+ Die Interpretation der Daten ist unterschiedlich.
+ Hardwaretechnisch ist DHT22 genauer und kann auch negative Temperaturwerte
+ anzeigen.
+\begin_inset Foot
+status collapsed
+
+\begin_layout Plain Layout
+genaueres findet sich im Datenblatt der beiden Sensoren: DHT11: http://www.geeete
+ch.com/wiki/index.php/DHT_11_Humidity_%26_Temperature_Sensor, DHT22: https://cdn-s
+hop.adafruit.com/datasheets/Digital+humidity+and+temperature+sensor+AM2302.pdf
+ 
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
-Für die Ansteuerung des LCD - Displays wurde die Bibliothek 
-\begin_inset Quotes gld
-\end_inset
+Am Anfang der Funktion wird die letzte Abfragezeit mit der aktuellen Zeit
+ verglichen.
+ Ist die Differenz geringer als der Zeitintervall, wird die Funktion verlassen
+ und ein Fehlercode zurück gegeben.
+ Der Sensor wird nun nach dem o.g.
+ Vorgehen aktiviert und auf Empfang gestellt.
+ Der Interrupt vom PIN (Interrupt INT1, bzw.
+ PCINT0) signalisiert die Änderung der Pegel.
+ Die abgelaufene Zeit des vorher gestarteten Timer2 wird nun ausgewertet.
+ Damit kann das Bit im entsprechenden Array zwischengespeichert werden.
+ Das Auswerten der Daten und der Prüfsumme muss auf unterschiedlicher Weise
+ erfolgen.
+ Im DHT11 werden die Werte vor und nach dem Komma je als 8-Bit-Werte verschickt.
+ DHT22 schickt diese als 16-Bit.
+ Stimmt das Prüfbyte werden die Daten in das Sensor-Array an entsprechender
+ Stelle geschrieben und die Routine verlassen.
+ Tritt während der Ausführung ein Fehler auf, wird ein Fehler an das Hauptprogra
+mm zurück gegeben.
+\end_layout
 
-LiquidCrystal_I2C.h
-\begin_inset Quotes grd
-\end_inset
+\begin_layout Standard
+Beim Entwickeln bereitete besonders die korrekte Auswertung der Daten ohne
+ Bibliothek Schwierigkeiten.
+ Erst wurde versucht, die Pegelzustände aus einer Schleife immer wieder
+ abzufragen, was aber sehr fehleranfällig war.
+ Die Implementierung mit den Interrupts erwies sich als stabile Lösung.
+\end_layout
 
- genutzt.
- Es ist möglich, die einzelnen Werte mit Umschalten anzusehen.
- Die Änderung der Feuchtigkeit lässt sich anzeigen.
- Ein Testmodus dient zum Prüfen, ob die Warn - LED's und das Display korrekt
- arbeiten.
- Gezeigt wird der Programmablaufplan in Abbildung 
-\begin_inset CommandInset ref
-LatexCommand ref
-reference "fig:papAnzeige"
-plural "false"
-caps "false"
-noprefix "false"
+\begin_layout Subsubsection
+Abfrage der analogen Sensoren
+\end_layout
 
-\end_inset
+\begin_layout Standard
+Zum Einsatz kommen auch analoge Sensoren.
+ Der AMT1001 ist ein analoger Feuchtigkeits- und Temperatursensor.
+ Allerdings scheint der Sensor für die Temperatur nicht so richtig zu funktionie
+ren.
+ Deshalb kommt erlegdigt ein LM35 diese Aufgabe.
+\end_layout
 
-.
+\begin_layout Standard
+Am Anfang der Funktion wird wieder überprüft, ob die letzte Abfragezeit
+ lang genug vorüber ist.
+ Für beide Sensoren wird nacheinander die Analog - Digital - (AD -) Wandlung
+ gestartet und die ausgewertete empfangene Spannung auf den entsprechenden
+ Wert umgerechnet.
+ Zweimal wird die AD - Wandlung durchgeführt, da der erste Wert nicht sicher
+ ist.
+ Der Feuchtigkeitssensor liefert Werte bis 3V.
+ Deshalb wird die interne 5V-Referenzspannung genommen.
+ Die Daten werden ausgewertet und mit den Grenzwerten der jeweiligen Sensoren
+ überprüft.
+ Wird kein Fehler festgestellt, werden diese in das entsprechende Array
+ geschrieben und die Funktion verlassen.
+\end_layout
+
+\begin_layout Subsection
+Anzeige der Werte
 \end_layout
 
 \begin_layout Standard
@@ -1508,7 +1588,31 @@ name "fig:papAnzeige"
 \end_layout
 
 \begin_layout Standard
+Für die Ansteuerung des LCD - Displays wurde die Bibliothek 
+\begin_inset Quotes gld
+\end_inset
 
+LiquidCrystal_I2C.h
+\begin_inset Quotes grd
+\end_inset
+
+ genutzt.
+ Es ist möglich, die einzelnen Werte durch Betätigen des Tasters anzusehen.
+ Die Änderung der Feuchtigkeit über eine bestimmte Zeit lässt sich über
+ das Display anzeigen.
+ Ein Testmodus dient zum Prüfen, ob die Warn - bzw Status - LED sowie das
+ Display korrekt arbeiten.
+ Gezeigt wird der Programmablaufplan für die Anzeige in Abbildung 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:papAnzeige"
+plural "false"
+caps "false"
+noprefix "false"
+
+\end_inset
+
+.
 \end_layout
 
 \begin_layout Subsubsection
@@ -1520,8 +1624,8 @@ Für die hinterlegen Sensoren wurden sprechende Bezeichnungen über den Standort
  hinterlegt, welche auf dem Display angezeigt werden.
  Es wurden eigene Symbole hinterlegt, um Platz auf dem Display zu sparen
  und den angezeigten Wert symbolisch anzudeuten.
- Es werden die aktuellen Werte für Temperatur und Luftfeuchtigkeit des Sensors
- gezeigt, siehe Abbildung 
+ Im Standardmodus sieht man die aktuellen Werte für Temperatur und Luftfeuchtigk
+eit des Sensors (siehe Abbildung 
 \begin_inset CommandInset ref
 LatexCommand ref
 reference "fig:displayanzeige"
@@ -1531,7 +1635,7 @@ noprefix "false"
 
 \end_inset
 
-.
+).
 \end_layout
 
 \begin_layout Subsubsection
@@ -1569,7 +1673,7 @@ Dabei steht
 
  für die n - te Stelle im Array.
  Es wird daher fortlaufend die Differenz zwischen dem aktuellen und den
- n - ten Wert gebildet und angezeigt.
+ n - ten Wert gebildet.
 \end_layout
 
 \begin_layout Standard
@@ -1646,8 +1750,9 @@ t
 Die gelbe LED leuchtet, sobald der Taster betätigt wird.
  Wenn sie erlischt, kann der Nutzer den Taster losgelassen und es wird die
  Änderung der relativen Luftfeuchtigkeit angezeigt.
- Wird der Taster weiterhin gehalten und die gelbe LED fängt an zu blinken,
- wurde der Testmodus gestartet.
+ Wird der Taster weiterhin gehalten und die gelbe LED blinkt kurz, kann
+ der Taster losgelassen werden.
+ Der Testmodus ist gestartet.
 \end_layout
 
 \begin_layout Chapter
