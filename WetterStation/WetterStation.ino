@@ -122,7 +122,7 @@ ISR(PCINT2_vect) {
 	return;
 }
 
-// Timer2 Taster und rote LED (16ms)
+// Timer0 Taster und rote LED (16ms)
 ISR(TIMER0_COMPA_vect) {
 	timer0_over++;
 	timerTaster++;
@@ -160,7 +160,7 @@ ISR(TIMER1_COMPA_vect) {
 	return;
 }
 
-// Timer0 (Sensoren)
+// Timer2 (Sensoren)
 ISR(TIMER2_COMPA_vect) {
 	timer2_over++;
 	return;
