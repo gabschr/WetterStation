@@ -139,6 +139,7 @@ ISR(TIMER0_COMPA_vect) {
 			PORTB |= (1 << ledgePD);
 			if (timerTaster > 380) {
 				PORTB &= ~(1 << ledgePD);
+				tasterBetaetigung = 0;
 			}
 		}
 	}
@@ -809,12 +810,12 @@ void pruefungFeuchtigkeitUeber60() {
 }
 
 void testWetterStation() {
+	anzeigeSensor = sensorAnzahl;
+	aktuelleWerteAnzeigen(lcdBreite, lcdHoehe);
 	if (wetterSensor[0][sensorAnzahl][3] <= 0) { //Feuchtigkeit = 0 (Beginn des Testmodus) - 1. Werte setzen
 		wetterSensor[0][sensorAnzahl][2] = -5;
 		wetterSensor[0][sensorAnzahl][3] = 55;
 		letzteAbrufzeit[sensorAnzahl][1] = timer1Sek;
-		anzeigeSensor = sensorAnzahl;
-		return;
 	}
 	if ((timer1Sek - letzteAbrufzeit[sensorAnzahl][1]) > 4) {
 		letzteAbrufzeit[sensorAnzahl][1] = timer1Sek;
@@ -828,7 +829,6 @@ void testWetterStation() {
 			tasterBetaetigung = 0;
 			anzeigeSensor = 0;
 			PORTB &= ~(1 << ledgePD);	//LEDge ausschalten
-			aktuelleWerteAnzeigen(lcdBreite, lcdHoehe);
 		}
 	}
 	return;
