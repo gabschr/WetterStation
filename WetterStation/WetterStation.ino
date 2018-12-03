@@ -9,7 +9,7 @@
 ****************************************************************/
 
 //************* Debug Modus ************************************
-#define DEBUG 1 //auskommentieren für reale Nutzung
+//#define DEBUG 1 //auskommentieren für reale Nutzung
 
 //************* Includes ***************************************
 //Display - Bibliotheken
@@ -37,7 +37,7 @@ const uint8_t sensorAnzahl = 3; // Anzahl vorhandener Sensoren
 //Werte 1.Dimesion: 0: Nr. des Sensors, 1: Messzeitpunkt der Messung (ab Start vom Arduino in s), 2.Wert: Temp, 3.Wert: Luftfeuchte
 double wetterSensor[historischeWerteAnzahl][sensorAnzahl + 1][4];
 
-uint32_t letzteAbrufzeit[sensorAnzahl + 1][3]; //0. Stelle: Senssor-Typ, 1.Stelle: letzter Abfragewert Sensor
+uint32_t letzteAbrufzeit[sensorAnzahl + 1][3]; //0. Stelle: Senssor-Typ, 1.Stelle: letzter Abfragewert Sensor, 2.Stelle: Zeit historische Daten
 uint32_t letzteVerschiebungszeitpunkt;
 
 volatile uint8_t timer0_over = 0;
@@ -48,7 +48,7 @@ volatile uint8_t portInterrupt = 0;
 uint8_t timerTaster = 0;
 uint8_t blinkzeitLedRt = 0;	//zwischen 0 und 15, 0-> gar nicht blinken; 12- langsames blinken; 1-schnelles blinken
 uint8_t blinkzeitLedGe = 0;
-int8_t tasterBetaetigung = 0;	//0: nicht gedruckt, -1: muss entprellt werden, -2: ist entprellt, 1: gedrueckt, 2: lang gedruckt
+int8_t tasterBetaetigung = 0;	//0: nicht gedruckt, -1: muss entprellt werden, -2: ist entprellt, 1: gedrueckt, 2: lang gedruckt, 3: Funktion Historische Daten, 99: Testfunktion
 uint8_t anzeigeSensor = 0;	//welcher Sensor soll angezeigt werden? (0 -> 0.Wert im Array)
 String sensorBezeichnung = "unbk.";
 
@@ -84,7 +84,7 @@ ISR(PCINT0_vect) {
 		return;
 	}
 	//Taster wurde losgelassen und war vorher stabil
-	if ((aktuellerTasterWert == 1) && (tasterBetaetigung <= -2)) {
+	if (aktuellerTasterWert == 1 && tasterBetaetigung <= -2) {
 		PORTB &= ~(1 << ledgePD); //gelbe LED aus
 		if (timerTaster > 200) {	//(Testmodus)
 			tasterBetaetigung = 99;
@@ -94,22 +94,26 @@ ISR(PCINT0_vect) {
 			tasterBetaetigung = 2;
 			return;
 		}
-		tasterBetaetigung = 1;
+		if (timerTaster <= 100) {
+			tasterBetaetigung = 1;
+		}
 		return;
 	}
-	if (aktuellerTasterWert == 0 && tasterBetaetigung >= 2) {	//Abbruch der Testroutine
+	//Abbruch der Routine Historische Werte oder Testroutine
+	if (aktuellerTasterWert == 0 && tasterBetaetigung > 2) {
 		tasterBetaetigung = 0;
-		anzeigeSensor = 0;
-		wetterSensor[0][sensorAnzahl][2] = 0;
-		wetterSensor[0][sensorAnzahl][3] = 0;
-		anzeigeSensor = 0;
+		if (tasterBetaetigung == 99) {
+			anzeigeSensor = 0;
+			wetterSensor[0][sensorAnzahl][2] = 0;
+			wetterSensor[0][sensorAnzahl][3] = 0;
+		}
 		PORTB &= ~(1 << ledgePD);	//LEDge ausschalten
 	}
 	return;
 }
 
 // Abfragen des Sensors am Port D3 (DHT11)
-ISR(INT1_vect){
+ISR(INT1_vect) {
 	portInterrupt = 3;
 }
 
@@ -127,29 +131,31 @@ ISR(TIMER0_COMPA_vect) {
 	timer0_over++;
 	timerTaster++;
 	blinkzeitLedGe++;
-	// 50 ms nach Tastendruck warten, um Prellen auszuschließen
-	if (tasterBetaetigung < 0 && timerTaster > 3) {
-		tasterBetaetigung = -2;
-	}
-	// wenn waehrend des Entprellens Taster los gelassen wurde, soll LED auch irgendwann aus gehen
-	// Signalisierung, wann Taster so lange gedrueckt wurde, dass Testmodus anspringt
-	if (timerTaster > 110) {
-		PORTB &= ~(1 << ledgePD); //gelbe LED aus
-		if (timerTaster > 190 && timerTaster < 210 && tasterBetaetigung != 0) {
-			PORTB |= (1 << ledgePD);
-			if (timerTaster > 380) {
-				PORTB &= ~(1 << ledgePD);
-				tasterBetaetigung = 0;
-			}
-		}
-	}
+	// Blinkzeit rote LED
 	if ((blinkzeitLedRt > 0) && ((timer0_over / 6) == blinkzeitLedRt)) {
 		PORTB ^= (1 << ledrtPD);  //LED toggelnd
 		timer0_over = 0;
 	}
-	if (tasterBetaetigung == 99 && blinkzeitLedGe > 50) {	//TEST-MODUS?
+	//TEST-MODUS?
+	if (tasterBetaetigung == 99 && blinkzeitLedGe > 50) {
 		PORTB ^= (1 << ledgePD);  //LED toggelnd
 		blinkzeitLedGe = 0;
+	}
+	// 50 ms nach Tastendruck warten, um Prellen auszuschließen
+	if (tasterBetaetigung == - 1 && timerTaster > 3) {
+		tasterBetaetigung = -2;
+	}
+	// vor Testmodus LEDge blinken
+	if (tasterBetaetigung < 0 && timerTaster > 110) {
+		PORTB &= ~(1 << ledgePD); //gelbe LED aus}
+		if (timerTaster > 250) {
+			tasterBetaetigung = 0;
+			return;
+		}
+		if (timerTaster > 190 && timerTaster < 210) {
+			PORTB |= (1 << ledgePD);
+			return;
+		}
 	}
 	return;
 }
@@ -246,7 +252,7 @@ void setup() {
 	ADCSRA |= (1 << ADPS2) | (1 << ADPS1); //ADC prescaler auf 64 => ADC Freq. = 250kHz
 	ADCSRB |= (1 << ADTS0); //ANALOG COMPARATOR
 
-	// ()()()()()())()()()()() INTERRUPTS ()()()()()()()()()()()()()()()()()()()()
+	// ()()()()()())()()()()() INTERRUPTS initialisieren ()()()()()()()()()()()()()()()()()
 	cli();	//deaktivieren von Interrupts
 
 	// TIMER0 fuer Taster und LED
@@ -292,6 +298,12 @@ void setup() {
 	sei();	//aktivieren von Interrupts
 }
 
+//************* sensor Name festlegen **************************
+//Name:           sensorNameFestlegen                          *
+//Beschreibung    legt Namen der Sensoren fest				   *
+//Parameter       keine                                        *
+//Rückgabe        keine                                        *
+//**************************************************************
 void sensorNameFestlegen() {
 	sensorBezeichnung = "Default";
 	switch (anzeigeSensor) {
@@ -318,9 +330,9 @@ void sensorNameFestlegen() {
 //**************************************************************
 void loop() {
 	int8_t kontrolle = 0;
+	// 1. Digitalen Sensor abfragen
 	kontrolle = sensorFeuchtTempAbfrage(feuchtLuftPD);
 
-	// Events bei neuen Sensorwerten
 	if (kontrolle > 0) {
 		tasterAuswerten();
 	}
@@ -549,8 +561,6 @@ int sensorFeuchtTempAbfrage(uint8_t pin) {
 		return -50;
 	}
 
-	// Pruefung auf Plausibilitaet der Daten ->-> muss noch gemaccht werden
-
 	//Werte schreiben in Array
 	wetterSensor[0][sensorImArray][1] = timer1Sek;
 
@@ -713,7 +723,7 @@ void tasterAuswerten() {
 		testWetterStation();
 		break;
 	default:
-    aktuelleWerteAnzeigen(lcdBreite, lcdHoehe);
+		aktuelleWerteAnzeigen(lcdBreite, lcdHoehe);
 		break;
 	}
 }
@@ -865,7 +875,6 @@ void verlaufArrayVorschieben() {
 #endif  
 		}
 	}
-
 	letzteVerschiebungszeitpunkt = aktuelleZeit;
 	return;
 }
@@ -892,13 +901,13 @@ void testWetterStation() {
 	wetterSensor[0][sensorAnzahl][3] = wetterSensor[0][sensorAnzahl][3] + 5;
 	pruefungFeuchtigkeitUeber60;
 	aktuelleWerteAnzeigen(lcdBreite, lcdHoehe);
-	if (wetterSensor[0][sensorAnzahl][3] > 100) {	//Ende der Testroutine
+	if (wetterSensor[0][sensorAnzahl][3] >= 100) {	//Ende der Testroutine
 		wetterSensor[0][sensorAnzahl][2] = 0;
 		wetterSensor[0][sensorAnzahl][3] = 0;
 		tasterBetaetigung = 0;
 		anzeigeSensor = 0;
 		PORTB &= ~(1 << ledgePD);	//LEDge ausschalten
-	
+		aktuelleWerteAnzeigen(lcdBreite, lcdHoehe);
 	}
 	return;
 }
