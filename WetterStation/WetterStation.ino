@@ -9,7 +9,7 @@
 ****************************************************************/
 
 //************* Debug Modus ************************************
-//#define DEBUG 1 //auskommentieren für reale Nutzung
+#define DEBUG 1 //auskommentieren für reale Nutzung
 
 //************* Includes ***************************************
 //Display - Bibliotheken
