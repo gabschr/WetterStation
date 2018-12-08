@@ -101,12 +101,12 @@ ISR(PCINT0_vect) {
 	}
 	//Abbruch der Routine Historische Werte oder Testroutine
 	if (aktuellerTasterWert == 0 && tasterBetaetigung > 2) {
-		tasterBetaetigung = 0;
 		if (tasterBetaetigung == 99) {
 			anzeigeSensor = 0;
 			wetterSensor[0][sensorAnzahl][2] = 0;
 			wetterSensor[0][sensorAnzahl][3] = 0;
 		}
+		tasterBetaetigung = 0;
 		PORTB &= ~(1 << ledgePD);	//LEDge ausschalten
 	}
 	return;
@@ -147,7 +147,7 @@ ISR(TIMER0_COMPA_vect) {
 	}
 	// vor Testmodus LEDge blinken
 	if (tasterBetaetigung < 0 && timerTaster > 110) {
-		PORTB &= ~(1 << ledgePD); //gelbe LED aus}
+		PORTB &= ~(1 << ledgePD); //gelbe LED aus
 		if (timerTaster > 250) {
 			tasterBetaetigung = 0;
 			return;
@@ -887,21 +887,23 @@ void verlaufArrayVorschieben() {
 //Rückgabe        keine                                        *
 //**************************************************************
 void testWetterStation() {
-	anzeigeSensor = sensorAnzahl;
 	if (wetterSensor[0][sensorAnzahl][3] <= 0) { //Feuchtigkeit = 0 (Beginn des Testmodus) - 1. Werte setzen
+		anzeigeSensor = sensorAnzahl;
 		wetterSensor[0][sensorAnzahl][2] = -5;
 		wetterSensor[0][sensorAnzahl][3] = 55;
 		letzteAbrufzeit[sensorAnzahl][1] = timer1Sek;
+		aktuelleWerteAnzeigen(lcdBreite, lcdHoehe);
 	}
 	if ((timer1Sek - letzteAbrufzeit[sensorAnzahl][1]) < 4) {
 		return;
 	}
+	anzeigeSensor = sensorAnzahl;
 	letzteAbrufzeit[sensorAnzahl][1] = timer1Sek;
 	wetterSensor[0][sensorAnzahl][2] = wetterSensor[0][sensorAnzahl][2] + 5;
 	wetterSensor[0][sensorAnzahl][3] = wetterSensor[0][sensorAnzahl][3] + 5;
 	pruefungFeuchtigkeitUeber60;
 	aktuelleWerteAnzeigen(lcdBreite, lcdHoehe);
-	if (wetterSensor[0][sensorAnzahl][3] >= 100) {	//Ende der Testroutine
+	if (wetterSensor[0][sensorAnzahl][3] > 100) {	//Ende der Testroutine
 		wetterSensor[0][sensorAnzahl][2] = 0;
 		wetterSensor[0][sensorAnzahl][3] = 0;
 		tasterBetaetigung = 0;
