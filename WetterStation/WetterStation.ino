@@ -901,7 +901,7 @@ void testWetterStation() {
 	letzteAbrufzeit[sensorAnzahl][1] = timer1Sek;
 	wetterSensor[0][sensorAnzahl][2] = wetterSensor[0][sensorAnzahl][2] + 5;
 	wetterSensor[0][sensorAnzahl][3] = wetterSensor[0][sensorAnzahl][3] + 5;
-	pruefungFeuchtigkeitUeber60;
+	pruefungFeuchtigkeitUeber60();
 	aktuelleWerteAnzeigen(lcdBreite, lcdHoehe);
 	if (wetterSensor[0][sensorAnzahl][3] > 100) {	//Ende der Testroutine
 		wetterSensor[0][sensorAnzahl][2] = 0;
